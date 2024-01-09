@@ -1,3 +1,8 @@
+mod read;
+
 fn main() {
-    println!("Hello, world!");
+    match read::from_file() {
+        Ok(source) => println!("{source}"),
+        Err(err) => eprintln!("{err}"),
+    }
 }
