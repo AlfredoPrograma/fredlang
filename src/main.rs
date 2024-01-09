@@ -1,4 +1,5 @@
 mod read;
+mod scanner;
 
 fn main() {
     match read::from_file() {
