@@ -1,4 +1,4 @@
-use scanner::Scanner;
+use crate::tokenizer::parse::parse_token;
 
 mod read;
 mod scanner;
@@ -7,9 +7,7 @@ mod tokenizer;
 fn main() {
     match read::from_file() {
         Ok(source) => {
-            let mut scanner = Scanner::new(source.as_str());
-
-            scanner.run()
+            println!("{:#?}", parse_token(&source));
         }
         Err(err) => eprintln!("{err}"),
     }
