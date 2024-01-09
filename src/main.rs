@@ -2,6 +2,7 @@ use scanner::Scanner;
 
 mod read;
 mod scanner;
+mod tokenizer;
 
 fn main() {
     match read::from_file() {
