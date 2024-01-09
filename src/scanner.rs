@@ -95,6 +95,24 @@ impl<'a> Scanner<'a> {
     }
 }
 
+impl<'a> Scanner<'a> {
+    /// Runs available parsers for grammar, generates a token and registers it in scanner state.
+    fn register_token() {
+        todo!()
+    }
+
+    /// Loops over the source code and tokenizes it until ends.
+    ///
+    /// If tokenizing fails, keeps looping and registering errors in scanner state
+    fn tokenize() {
+        todo!()
+    }
+
+    pub fn run(&mut self) {
+        println!("{}", self.source)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Location, Scanner};
