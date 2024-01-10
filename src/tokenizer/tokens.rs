@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 /// Represents the available token kinds for language grammar
 pub enum TokenKind {
     // Single character tokens
@@ -15,13 +15,24 @@ pub enum TokenKind {
     Semicolon,
     Slash,
     Star,
+    EOF,
+
+    // Possible pair tokens,
+    Bang,
+    BangEqual,
+    Equal,
+    DoubleEqual,
+    Greater,
+    GreaterEqual,
+    Lesser,
+    LesserEqual,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 /// Represents the tokenized structure for given gramar.
 pub struct Token {
-    lexeme: String,
-    kind: TokenKind,
+    pub lexeme: String,
+    pub kind: TokenKind,
 }
 
 impl Token {

@@ -2,6 +2,11 @@
 
 use std::{error::Error, fmt};
 
+use crate::tokenizer::{
+    parse::parse_token,
+    tokens::{Token, TokenKind},
+};
+
 /// Contains information about error occurred during the scanning proccess.
 #[derive(Debug)]
 pub struct ScannerError {
@@ -22,6 +27,7 @@ impl fmt::Display for ScannerError {
 }
 
 /// Keeps track of the position of the parsing proccess.
+#[derive(Debug)]
 pub struct Location {
     /// Current line.
     line: usize,
@@ -51,9 +57,13 @@ impl Location {
     }
 
     /// Increases global cursor and current line offset by a characters consumed amount
-    pub fn update_offset(&mut self, consumed: usize) {
-        self.cursor += consumed;
+    pub fn update_line_offset(&mut self, consumed: usize) {
         self.line_offset += consumed
+    }
+
+    /// Increases global cursor offset by a characters consumend amount
+    pub fn update_cursor(&mut self, consumed: usize) {
+        self.cursor += consumed;
     }
 }
 
@@ -63,6 +73,7 @@ impl Location {
 /// meaningful structures for later interpreting.
 ///
 /// `Scanner` parses, tokenizes and register errors during the tokenization proccess.
+#[derive(Debug)]
 pub struct Scanner<'a> {
     /// Source code to scan.
     source: &'a str,
@@ -71,7 +82,7 @@ pub struct Scanner<'a> {
     location: Location,
 
     /// Generated tokens.
-    tokens: Vec<String>,
+    tokens: Vec<Token>,
 
     /// Registered errors.
     errors: Vec<ScannerError>,
@@ -97,27 +108,68 @@ impl<'a> Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     /// Runs available parsers for grammar, generates a token and registers it in scanner state.
-    fn register_token() {
-        todo!()
+    fn register_token(&mut self, source: &str) {
+        // tries to parse input as some token
+        match parse_token(source) {
+            Ok((token, consumed)) => {
+                // we dont want to register EOF tokens, so just update line
+                if token.kind == TokenKind::EOF {
+                    self.location.update_line();
+                } else {
+                    // if parsed token is not EOF, update line offset and register it
+                    self.location.update_line_offset(consumed);
+                    self.tokens.push(token);
+                }
+
+                // always update global cursor
+                self.location.update_cursor(consumed)
+            }
+            Err(err) => {
+                const END_OF_LINE: &'static str = "\n";
+                let scanner_err = ScannerError::new("cannot register token", Some(Box::new(err)));
+
+                // takes current input line until next `\n` character and compute the consumed characters amount
+                match source.split_once(END_OF_LINE) {
+                    Some((before, _)) => {
+                        // compute `consumed` value adding up the length of the line and the delimiter character size
+                        let consumed = before.len() + END_OF_LINE.len();
+                        self.location.update_line();
+                        self.location.update_cursor(consumed);
+                    }
+
+                    // if none `before` exists is because we are at last line, so just update cursor with current source length
+                    None => self.location.update_cursor(source.len()),
+                }
+
+                // always register error
+                self.errors.push(scanner_err)
+            }
+        }
     }
 
     /// Loops over the source code and tokenizes it until ends.
     ///
     /// If tokenizing fails, keeps looping and registering errors in scanner state
-    fn tokenize() {
-        todo!()
-    }
+    pub fn tokenize(&mut self) {
+        let mut current_source = self.source;
 
-    pub fn run(&mut self) {
-        println!("{}", self.source)
+        while !self.is_end() {
+            self.register_token(current_source);
+            current_source = &self.source[self.location.cursor..];
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        scanner,
+        tokenizer::tokens::{Token, TokenKind},
+    };
+
     use super::{Location, Scanner};
 
-    const SOURCE: &'static str = "hello world";
+    const SOURCE: &'static str = "()\n-.\n";
 
     #[test]
     fn new_location() {
@@ -165,7 +217,8 @@ mod tests {
         const RND_OFFSET: usize = 25;
         let mut location = Location::new();
 
-        location.update_offset(RND_OFFSET);
+        location.update_cursor(RND_OFFSET);
+        location.update_line_offset(RND_OFFSET);
 
         assert_eq!(
             location.line_offset, RND_OFFSET,
@@ -216,5 +269,98 @@ mod tests {
             scanner.is_end(),
             "should return true if global cursor is  at the end of the source code"
         )
+    }
+
+    #[test]
+    fn scanner_register_token() {
+        let expected_tokens = vec![
+            Token::new('('.to_string(), TokenKind::OpeningParentheses),
+            Token::new(')'.to_string(), TokenKind::ClosingParentheses),
+            Token::new('-'.to_string(), TokenKind::Minus),
+            Token::new('.'.to_string(), TokenKind::Dot),
+        ];
+
+        let mut scanner = Scanner::new(SOURCE);
+
+        for (i, _) in SOURCE.chars().enumerate() {
+            scanner.register_token(&SOURCE[i..])
+        }
+
+        // check all tokens were registered successfully
+        for (i, token) in scanner.tokens.clone().into_iter().enumerate() {
+            assert_eq!(
+                token, expected_tokens[i],
+                "should register token in scanner state"
+            )
+        }
+
+        // check location state was updated successfully
+        assert_eq!(
+            scanner.location.line, 3,
+            "should update line counter on each end of line character"
+        );
+
+        assert_eq!(
+            scanner.location.cursor,
+            SOURCE.len(),
+            "should end scanning proccess with the same count as source lenght"
+        );
+
+        assert_eq!(
+            scanner.location.line_offset, 0,
+            "should end with line offset counter as zero"
+        )
+    }
+
+    #[test]
+    fn scanner_tokenize() {
+        const SOURCE: &'static str = "()\n.\ninvalid\n{+-*}";
+
+        // just one error for `SOURCE` string ("invalid" fragment)
+        const EXPECTED_ERRORS_AMOUNT: usize = 1;
+
+        // line counter should be 4 after tokenization for `SOURCE` input
+        const EXPECTED_LINE_AMOUNT: usize = 4;
+
+        let expected_tokens = vec![
+            Token::new('('.to_string(), TokenKind::OpeningParentheses),
+            Token::new(')'.to_string(), TokenKind::ClosingParentheses),
+            Token::new('.'.to_string(), TokenKind::Dot),
+            Token::new('{'.to_string(), TokenKind::OpeningCurlyBrace),
+            Token::new('+'.to_string(), TokenKind::Plus),
+            Token::new('-'.to_string(), TokenKind::Minus),
+            Token::new('*'.to_string(), TokenKind::Star),
+            Token::new('}'.to_string(), TokenKind::ClosingCurlyBrace),
+        ];
+
+        let mut scanner = Scanner::new(SOURCE);
+        scanner.tokenize();
+
+        // check registered tokens
+        for (i, token) in scanner.tokens.clone().into_iter().enumerate() {
+            assert_eq!(
+                token, expected_tokens[i],
+                "should generate token's register based on current input"
+            );
+        }
+
+        // check registered errors
+        assert_eq!(
+            scanner.errors.len(),
+            EXPECTED_ERRORS_AMOUNT,
+            "should register errors"
+        );
+
+        // check location state
+        assert_eq!(
+            scanner.location.cursor,
+            SOURCE.len(),
+            "should position global cursor at end of the source input after complete tokenization"
+        );
+
+        assert_eq!(
+            scanner.location.line, EXPECTED_LINE_AMOUNT,
+            "should contain the total amount of lines registered after complete tokenization"
+        );
     }
 }
