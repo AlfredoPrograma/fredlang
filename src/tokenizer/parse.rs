@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use nom::{branch::alt, bytes, character, sequence, AsChar, Parser};
+use nom::{branch::alt, bytes, character, number, sequence, AsChar, Parser};
 
 use super::tokens::{Token, TokenKind};
 use std::{error::Error, fmt, result};
@@ -139,12 +139,24 @@ fn literal_parser<'a>() -> TokenParser<'a> {
     })
 }
 
+/// Tries to parse a number token based on the grammar of the language.
+fn number_parser<'a>() -> TokenParser<'a> {
+    Box::new(|input| {
+        number::complete::double(input).map(|(next, number)| {
+            let token = Token::new(number.to_string(), TokenKind::Number);
+
+            (next, (token, number.to_string().len()))
+        })
+    })
+}
+
 /// Takes source code and performs the list of token parsers for available grammars.
 ///
 /// If no one parser can parse the grammar, returns a parse error.
 pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     let (token, consumed) = alt((
         literal_parser(),
+        number_parser(),
         pair_composable_operator_parser(),
         single_char_token_parser(),
         single_composable_operator_parser(),
@@ -167,7 +179,7 @@ mod tests {
         tokens::{Token, TokenKind},
     };
 
-    use super::{single_char_token_parser, SINGLE_CHARACTERS};
+    use super::{number_parser, single_char_token_parser, SINGLE_CHARACTERS};
 
     #[test]
     fn try_single_char_token_parser() {
@@ -293,5 +305,30 @@ mod tests {
             SOURCE.len(),
             "should return corresponding consumed characters length"
         )
+    }
+
+    #[test]
+    fn try_number_parser() {
+        let source_numbers = vec!["0", "-10", "-5.25", "20", "29.55", "3.05"];
+        let expected_tokens: Vec<Token> = source_numbers
+            .clone()
+            .into_iter()
+            .map(|n| Token::new(n.to_string(), TokenKind::Number))
+            .collect();
+
+        for (i, number) in source_numbers.clone().into_iter().enumerate() {
+            let (_, (token, consumed)) = number_parser().parse(number).unwrap();
+
+            assert_eq!(
+                token, expected_tokens[i],
+                "should parse input and return the corresponding number token"
+            );
+
+            assert_eq!(
+                consumed,
+                number.len(),
+                "should return corresponding consumed characters length"
+            )
+        }
     }
 }
