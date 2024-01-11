@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use nom::{branch::alt, character, AsChar, Parser};
+use nom::{branch::alt, bytes, character, sequence, AsChar, Parser};
 
 use super::tokens::{Token, TokenKind};
 use std::{error::Error, fmt, result};
@@ -116,11 +116,35 @@ fn pair_composable_operator_parser<'a>() -> TokenParser<'a> {
     })
 }
 
+/// Tries to parse literal (string) token based on the grammar of the language.
+fn literal_parser<'a>() -> TokenParser<'a> {
+    const LITERAL_DELIMITER: char = '"';
+    Box::new(|input: &'a str| {
+        sequence::delimited(
+            character::complete::char(LITERAL_DELIMITER),
+            // TODO: handle break lines inside literal strings
+            bytes::complete::take_until(LITERAL_DELIMITER.to_string().as_str()),
+            character::complete::char(LITERAL_DELIMITER),
+        )
+        .parse(input)
+        .map(|(next, literal)| {
+            let token = Token::new(literal.to_string(), TokenKind::Literal);
+
+            // `consumed` amount is equivalent to the length of the parsed literal string plus the
+            // delimiters sizes
+            let consumed = literal.len() + (LITERAL_DELIMITER.len() * 2);
+
+            (next, (token, consumed))
+        })
+    })
+}
+
 /// Takes source code and performs the list of token parsers for available grammars.
 ///
 /// If no one parser can parse the grammar, returns a parse error.
 pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     let (token, consumed) = alt((
+        literal_parser(),
         pair_composable_operator_parser(),
         single_char_token_parser(),
         single_composable_operator_parser(),
@@ -137,7 +161,9 @@ mod tests {
     use nom::AsChar;
 
     use crate::tokenizer::{
-        parse::{pair_composable_operator_parser, single_composable_operator_parser},
+        parse::{
+            literal_parser, pair_composable_operator_parser, single_composable_operator_parser,
+        },
         tokens::{Token, TokenKind},
     };
 
@@ -248,5 +274,24 @@ mod tests {
             cursor += consumed;
             expected_token_index += 1;
         }
+    }
+
+    #[test]
+    fn try_literal_parser() {
+        const SOURCE: &'static str = "\"this is a string\"";
+        let expected_token = Token::new("this is a string".to_string(), TokenKind::Literal);
+
+        let (_, (token, consumed)) = literal_parser().parse(SOURCE).unwrap();
+
+        assert_eq!(
+            token, expected_token,
+            "should parse input and return a token for literal"
+        );
+
+        assert_eq!(
+            consumed,
+            SOURCE.len(),
+            "should return corresponding consumed characters length"
+        )
     }
 }
