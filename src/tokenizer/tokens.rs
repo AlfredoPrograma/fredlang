@@ -31,6 +31,21 @@ pub enum TokenKind {
     Literal,
     Number,
     Identifier,
+
+    // Keywords
+    And,
+    Or,
+    If,
+    Else,
+    For,
+    While,
+    True,
+    False,
+    Func,
+    Return,
+    Null,
+    Print,
+    Var,
 }
 
 #[derive(Debug, Clone, PartialEq)]

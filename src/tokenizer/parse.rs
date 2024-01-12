@@ -171,6 +171,50 @@ fn identifier_parser<'a>() -> TokenParser<'a> {
     })
 }
 
+/// Tries to parse a keyword based on the grammar of the language.
+fn keyword_parser<'a>() -> TokenParser<'a> {
+    Box::new(|input| {
+        identifier_parser()
+            .parse(input)
+            .map(|(next, (old_token, consumed))| {
+                let identifier = old_token.lexeme.as_str();
+
+                let token = match identifier {
+                    // Logical combinators
+                    "and" => Token::new(identifier.to_string(), TokenKind::And),
+                    "or" => Token::new(identifier.to_string(), TokenKind::Or),
+
+                    // If/else
+                    "if" => Token::new(identifier.to_string(), TokenKind::If),
+                    "else" => Token::new(identifier.to_string(), TokenKind::Else),
+
+                    // Loops
+                    "for" => Token::new(identifier.to_string(), TokenKind::For),
+                    "while" => Token::new(identifier.to_string(), TokenKind::While),
+
+                    // True/false
+                    "true" => Token::new(identifier.to_string(), TokenKind::True),
+                    "false" => Token::new(identifier.to_string(), TokenKind::False),
+
+                    // Functions
+                    "func" => Token::new(identifier.to_string(), TokenKind::Func),
+                    "return" => Token::new(identifier.to_string(), TokenKind::Return),
+
+                    // Null
+                    "null" => Token::new(identifier.to_string(), TokenKind::Null),
+
+                    // Variable declaration
+                    "var" => Token::new(identifier.to_string(), TokenKind::Var),
+
+                    // Print instruction
+                    "print" => Token::new(identifier.to_string(), TokenKind::Print),
+                    _ => unreachable!(),
+                };
+
+                (next, (token, consumed))
+            })
+    })
+}
 /// Takes source code and performs the list of token parsers for available grammars.
 ///
 /// If no one parser can parse the grammar, returns a parse error.
@@ -178,6 +222,7 @@ pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     let (token, consumed) = alt((
         // WARNING! Parsers order is very important because their must follow an specific heriarchy
         // in order to parse tokens correctly
+        keyword_parser(),
         identifier_parser(),
         literal_parser(),
         number_parser(),
@@ -206,7 +251,10 @@ mod tests {
         tokens::{Token, TokenKind},
     };
 
-    use super::{identifier_parser, number_parser, single_char_token_parser, SINGLE_CHARACTERS};
+    use super::{
+        identifier_parser, keyword_parser, number_parser, single_char_token_parser,
+        SINGLE_CHARACTERS,
+    };
 
     #[test]
     fn try_single_char_token_parser() {
@@ -381,6 +429,44 @@ mod tests {
                 consumed,
                 "should return corresponding consumed characters length"
             );
+        }
+    }
+
+    #[test]
+    fn try_keyword_parser() {
+        let keywords_source = vec![
+            "and", "or", "if", "else", "for", "while", "true", "false", "func", "return", "null",
+            "print", "var",
+        ];
+        let expected_tokens = vec![
+            Token::new("and".to_string(), TokenKind::And),
+            Token::new("or".to_string(), TokenKind::Or),
+            Token::new("if".to_string(), TokenKind::If),
+            Token::new("else".to_string(), TokenKind::Else),
+            Token::new("for".to_string(), TokenKind::For),
+            Token::new("while".to_string(), TokenKind::While),
+            Token::new("true".to_string(), TokenKind::True),
+            Token::new("false".to_string(), TokenKind::False),
+            Token::new("func".to_string(), TokenKind::Func),
+            Token::new("return".to_string(), TokenKind::Return),
+            Token::new("null".to_string(), TokenKind::Null),
+            Token::new("print".to_string(), TokenKind::Print),
+            Token::new("var".to_string(), TokenKind::Var),
+        ];
+
+        for (i, keyword) in keywords_source.clone().into_iter().enumerate() {
+            let (_, (token, consumed)) = keyword_parser().parse(keyword).unwrap();
+
+            assert_eq!(
+                token, expected_tokens[i],
+                "should parse input and return the corresponding keyword token"
+            );
+
+            assert_eq!(
+                consumed,
+                keyword.len(),
+                "should return corresponding consumed characters length"
+            )
         }
     }
 }
