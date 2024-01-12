@@ -1,13 +1,5 @@
-and
-or
-if
-else
-for
-while
-true
-false
-func
-return
-null
-print
-var
+func myFunction() {
+    var pais = "Venezuela";
+
+    return pais
+}

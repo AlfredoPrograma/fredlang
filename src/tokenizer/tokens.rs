@@ -16,6 +16,7 @@ pub enum TokenKind {
     Slash,
     Star,
     EOF,
+    Whitespace,
 
     // Possible pair tokens,
     Bang,

@@ -5,7 +5,7 @@ use nom::{branch::alt, bytes, character, number, sequence, AsChar, Parser};
 use super::tokens::{Token, TokenKind};
 use std::{error::Error, fmt, result};
 
-const SINGLE_CHARACTERS: &'static str = "(){},.-+;/*\n";
+const SINGLE_CHARACTERS: &'static str = "(){},.-+;/*\n ";
 const PAIR_COMPOSABLE_OPERATOR_CHARACTERS: &'static str = "!=<>";
 // Contains information about error occurred during the parser execution
 #[derive(Debug)]
@@ -54,6 +54,7 @@ fn single_char_token_parser<'a>() -> TokenParser<'a> {
                     '/' => Token::new(ch.to_string(), TokenKind::Slash),
                     '*' => Token::new(ch.to_string(), TokenKind::Star),
                     '\n' => Token::new(ch.to_string(), TokenKind::EOF),
+                    ' ' => Token::new(ch.to_string(), TokenKind::Whitespace),
 
                     // characters were validated in parser, so this branch should be unreachable
                     _ => unreachable!(),
@@ -156,7 +157,7 @@ fn number_parser<'a>() -> TokenParser<'a> {
 /// - [a-z]
 /// - [a-Z]
 /// - [0-9]
-fn identifier_parser<'a>() -> TokenParser<'a> {
+fn keyword_or_identifier_parser<'a>() -> TokenParser<'a> {
     Box::new(|input: &'a str| {
         // takes characters until reach an non ascii alphanumeric character
         // notice identifier parser always will try to parse the an identifier
@@ -164,57 +165,43 @@ fn identifier_parser<'a>() -> TokenParser<'a> {
         bytes::complete::take_till1(|c: char| !c.is_ascii_alphanumeric())
             .parse(input)
             .map(|(next, ident)| {
-                let token = Token::new(ident.to_string(), TokenKind::Identifier);
+                let token = match ident {
+                    // Logical combinators
+                    "and" => Token::new(ident.to_string(), TokenKind::And),
+                    "or" => Token::new(ident.to_string(), TokenKind::Or),
+
+                    // If/else
+                    "if" => Token::new(ident.to_string(), TokenKind::If),
+                    "else" => Token::new(ident.to_string(), TokenKind::Else),
+
+                    // Loops
+                    "for" => Token::new(ident.to_string(), TokenKind::For),
+                    "while" => Token::new(ident.to_string(), TokenKind::While),
+
+                    // True/false
+                    "true" => Token::new(ident.to_string(), TokenKind::True),
+                    "false" => Token::new(ident.to_string(), TokenKind::False),
+
+                    // Functions
+                    "func" => Token::new(ident.to_string(), TokenKind::Func),
+                    "return" => Token::new(ident.to_string(), TokenKind::Return),
+
+                    // Null
+                    "null" => Token::new(ident.to_string(), TokenKind::Null),
+
+                    // Variable declaration
+                    "var" => Token::new(ident.to_string(), TokenKind::Var),
+
+                    // Print instruction
+                    "print" => Token::new(ident.to_string(), TokenKind::Print),
+                    _ => Token::new(ident.to_string(), TokenKind::Identifier),
+                };
 
                 (next, (token, ident.len()))
             })
     })
 }
 
-/// Tries to parse a keyword based on the grammar of the language.
-fn keyword_parser<'a>() -> TokenParser<'a> {
-    Box::new(|input| {
-        identifier_parser()
-            .parse(input)
-            .map(|(next, (old_token, consumed))| {
-                let identifier = old_token.lexeme.as_str();
-
-                let token = match identifier {
-                    // Logical combinators
-                    "and" => Token::new(identifier.to_string(), TokenKind::And),
-                    "or" => Token::new(identifier.to_string(), TokenKind::Or),
-
-                    // If/else
-                    "if" => Token::new(identifier.to_string(), TokenKind::If),
-                    "else" => Token::new(identifier.to_string(), TokenKind::Else),
-
-                    // Loops
-                    "for" => Token::new(identifier.to_string(), TokenKind::For),
-                    "while" => Token::new(identifier.to_string(), TokenKind::While),
-
-                    // True/false
-                    "true" => Token::new(identifier.to_string(), TokenKind::True),
-                    "false" => Token::new(identifier.to_string(), TokenKind::False),
-
-                    // Functions
-                    "func" => Token::new(identifier.to_string(), TokenKind::Func),
-                    "return" => Token::new(identifier.to_string(), TokenKind::Return),
-
-                    // Null
-                    "null" => Token::new(identifier.to_string(), TokenKind::Null),
-
-                    // Variable declaration
-                    "var" => Token::new(identifier.to_string(), TokenKind::Var),
-
-                    // Print instruction
-                    "print" => Token::new(identifier.to_string(), TokenKind::Print),
-                    _ => unreachable!(),
-                };
-
-                (next, (token, consumed))
-            })
-    })
-}
 /// Takes source code and performs the list of token parsers for available grammars.
 ///
 /// If no one parser can parse the grammar, returns a parse error.
@@ -222,13 +209,12 @@ pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     let (token, consumed) = alt((
         // WARNING! Parsers order is very important because their must follow an specific heriarchy
         // in order to parse tokens correctly
-        keyword_parser(),
-        identifier_parser(),
+        keyword_or_identifier_parser(),
         literal_parser(),
         number_parser(),
         pair_composable_operator_parser(),
-        single_char_token_parser(),
         single_composable_operator_parser(),
+        single_char_token_parser(),
     ))
     .parse(input)
     .map(|(_, token)| token)
@@ -252,8 +238,7 @@ mod tests {
     };
 
     use super::{
-        identifier_parser, keyword_parser, number_parser, single_char_token_parser,
-        SINGLE_CHARACTERS,
+        keyword_or_identifier_parser, number_parser, single_char_token_parser, SINGLE_CHARACTERS,
     };
 
     #[test]
@@ -273,6 +258,7 @@ mod tests {
             Token::new('/'.to_string(), TokenKind::Slash),
             Token::new('*'.to_string(), TokenKind::Star),
             Token::new('\n'.to_string(), TokenKind::EOF),
+            Token::new(' '.to_string(), TokenKind::Whitespace),
         ];
 
         for (i, ch) in SINGLE_CHARACTERS.chars().enumerate() {
@@ -417,7 +403,7 @@ mod tests {
             .collect();
 
         for (i, identifier) in source_identifiers.into_iter().enumerate() {
-            let (_, (token, consumed)) = identifier_parser().parse(identifier).unwrap();
+            let (_, (token, consumed)) = keyword_or_identifier_parser().parse(identifier).unwrap();
 
             assert_eq!(
                 token, expected_tokens[i],
@@ -455,7 +441,7 @@ mod tests {
         ];
 
         for (i, keyword) in keywords_source.clone().into_iter().enumerate() {
-            let (_, (token, consumed)) = keyword_parser().parse(keyword).unwrap();
+            let (_, (token, consumed)) = keyword_or_identifier_parser().parse(keyword).unwrap();
 
             assert_eq!(
                 token, expected_tokens[i],

@@ -111,19 +111,27 @@ impl<'a> Scanner<'a> {
     fn register_token(&mut self, source: &str) {
         // tries to parse input as some token
         match parse_token(source) {
-            Ok((token, consumed)) => {
-                // we dont want to register EOF tokens, so just update line
-                if token.kind == TokenKind::EOF {
-                    self.location.update_line();
-                } else {
-                    // if parsed token is not EOF, update line offset and register it
+            Ok((token, consumed)) => match token.kind {
+                // For whitespaces just update the global cursor and the line offset
+                TokenKind::Whitespace => {
+                    self.location.update_cursor(consumed);
                     self.location.update_line_offset(consumed);
-                    self.tokens.push(token);
                 }
 
-                // always update global cursor
-                self.location.update_cursor(consumed)
-            }
+                // For end of lines update line counter and global cursor
+                TokenKind::EOF => {
+                    self.location.update_line();
+                    self.location.update_cursor(consumed);
+                }
+
+                // For the rest (and meaningful) tokens, update line offset, global cursor and append them into the tokens register
+                _ => {
+                    self.location.update_line_offset(consumed);
+                    self.location.update_cursor(consumed);
+
+                    self.tokens.push(token);
+                }
+            },
             Err(err) => {
                 const END_OF_LINE: &'static str = "\n";
                 let scanner_err = ScannerError::new("cannot register token", Some(Box::new(err)));
@@ -162,10 +170,7 @@ impl<'a> Scanner<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        scanner,
-        tokenizer::tokens::{Token, TokenKind},
-    };
+    use crate::tokenizer::tokens::{Token, TokenKind};
 
     use super::{Location, Scanner};
 
