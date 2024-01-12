@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn scanner_tokenize() {
-        const SOURCE: &'static str = "()\n.\ninvalid\n{+-*}";
+        const SOURCE: &'static str = "()\n.\n_invalid\n{+-*}";
 
         // just one error for `SOURCE` string ("invalid" fragment)
         const EXPECTED_ERRORS_AMOUNT: usize = 1;

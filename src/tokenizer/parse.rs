@@ -150,11 +150,35 @@ fn number_parser<'a>() -> TokenParser<'a> {
     })
 }
 
+/// Tries to parse an identifier based on the grammar of the language.
+///
+/// Identifiers are composed by a combination of the following characters:
+/// - [a-z]
+/// - [a-Z]
+/// - [0-9]
+fn identifier_parser<'a>() -> TokenParser<'a> {
+    Box::new(|input: &'a str| {
+        // takes characters until reach an non ascii alphanumeric character
+        // notice identifier parser always will try to parse the an identifier
+        // if it cant, it will fail
+        bytes::complete::take_till1(|c: char| !c.is_ascii_alphanumeric())
+            .parse(input)
+            .map(|(next, ident)| {
+                let token = Token::new(ident.to_string(), TokenKind::Identifier);
+
+                (next, (token, ident.len()))
+            })
+    })
+}
+
 /// Takes source code and performs the list of token parsers for available grammars.
 ///
 /// If no one parser can parse the grammar, returns a parse error.
 pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     let (token, consumed) = alt((
+        // WARNING! Parsers order is very important because their must follow an specific heriarchy
+        // in order to parse tokens correctly
+        identifier_parser(),
         literal_parser(),
         number_parser(),
         pair_composable_operator_parser(),
@@ -163,6 +187,9 @@ pub fn parse_token(input: &str) -> result::Result<(Token, usize), ParseError> {
     ))
     .parse(input)
     .map(|(_, token)| token)
+    // TODO: improve error mapping
+    // - Show invalid lexeme
+    // - Show error's location
     .map_err(|_| ParseError::new("cannot parse", None))?;
 
     Ok((token, consumed))
@@ -179,7 +206,7 @@ mod tests {
         tokens::{Token, TokenKind},
     };
 
-    use super::{number_parser, single_char_token_parser, SINGLE_CHARACTERS};
+    use super::{identifier_parser, number_parser, single_char_token_parser, SINGLE_CHARACTERS};
 
     #[test]
     fn try_single_char_token_parser() {
@@ -329,6 +356,31 @@ mod tests {
                 number.len(),
                 "should return corresponding consumed characters length"
             )
+        }
+    }
+
+    #[test]
+    fn try_identifier_parser() {
+        let source_identifiers = vec!["identifier", "123numberidentifier"];
+        let expected_tokens: Vec<Token> = source_identifiers
+            .clone()
+            .into_iter()
+            .map(|ident| Token::new(ident.to_string(), TokenKind::Identifier))
+            .collect();
+
+        for (i, identifier) in source_identifiers.into_iter().enumerate() {
+            let (_, (token, consumed)) = identifier_parser().parse(identifier).unwrap();
+
+            assert_eq!(
+                token, expected_tokens[i],
+                "should parse input and return the corresponding identifier token"
+            );
+
+            assert_eq!(
+                identifier.len(),
+                consumed,
+                "should return corresponding consumed characters length"
+            );
         }
     }
 }

@@ -30,6 +30,7 @@ pub enum TokenKind {
     // Primitives
     Literal,
     Number,
+    Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]
