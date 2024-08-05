@@ -1,4 +1,4 @@
-use std::{fmt, iter::Peekable};
+use std::{any::Any, fmt, iter::Peekable};
 
 use crate::tokens::{Token, TokenKind};
 
@@ -8,6 +8,7 @@ enum Expression {
     Unary(Token, Box<Expression>),
     Binary(Box<Expression>, Token, Box<Expression>),
     Group(Box<Expression>),
+    Null(Option<Box<Expression>>),
     Number(f32),
     String(String),
     Boolean(bool),
@@ -19,6 +20,10 @@ impl fmt::Display for Expression {
             Expression::String(s) => write!(f, "{s}"),
             Expression::Number(n) => write!(f, "{n}"),
             Expression::Boolean(b) => write!(f, "{b}"),
+            Expression::Null(n) => match n {
+                Some(expr) => write!(f, "{expr}"),
+                None => write!(f, "null"),
+            },
             Expression::Group(expr) => writeln!(f, "({})", expr),
             Expression::Unary(op, target) => write!(f, " ({}{})", op.lexeme, target),
             Expression::Binary(left, op, right) => write!(f, "({}{}{}) ", left, op.lexeme, right),
@@ -172,13 +177,13 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
                         .parse::<bool>()
                         .expect("cannot parse token lexeme as boolean"),
                 ),
+                TokenKind::Null => Expression::Null(None),
                 TokenKind::LeftParentheses => {
                     let grouped_expr = self.parse_expression();
                     self.tokens.next();
                     Expression::Group(grouped_expr.as_box())
                 }
 
-                TokenKind::Null => todo!("implement null token"),
                 _ => todo!(
                     "implement what happens if token does match with anything (some error I think)"
                 ),
@@ -207,12 +212,14 @@ mod ast_tests {
             Token::new("10".to_string(), TokenKind::Number, 1),
             Token::new("true".to_string(), TokenKind::True, 1),
             Token::new("false".to_string(), TokenKind::False, 1),
+            Token::new("null".to_string(), TokenKind::Null, 1),
         ];
         let expected_expressions = vec![
             Expression::String("this is a string".to_string()),
             Expression::Number(10.0),
             Expression::Boolean(true),
             Expression::Boolean(false),
+            Expression::Null(None),
         ];
 
         let mut ast = AST::new(tokens.into_iter());
