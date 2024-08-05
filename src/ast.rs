@@ -1,6 +1,9 @@
-use std::{any::Any, fmt, iter::Peekable};
+use std::{fmt, iter::Peekable};
 
-use crate::tokens::{Token, TokenKind};
+use crate::{
+    prelude::Result,
+    tokens::{Token, TokenKind},
+};
 
 #[derive(Debug, PartialEq)]
 /// Represents the expressions available for the AST.
@@ -40,31 +43,31 @@ impl Expression {
 /// Provides the required methods for parse the AST expressions.
 trait Parser {
     /// Parses the top level expression for AST.
-    fn parse_expression(&mut self) -> Expression;
+    fn parse_expression(&mut self) -> Result<Expression>;
     /// Parses equality expressions.
     ///
     /// equality -> comparison (("!=" | "==") comparison)*;
-    fn parse_equality(&mut self) -> Expression;
+    fn parse_equality(&mut self) -> Result<Expression>;
     /// Parses comparison expressions.
     ///
     /// comparison -> term ((">=" | ">" | "<=" | "<") term)*;
-    fn parse_comparison(&mut self) -> Expression;
+    fn parse_comparison(&mut self) -> Result<Expression>;
     /// Parses term expressions.
     ///
     /// term -> factor (("+" | "-") factor)*;
-    fn parse_term(&mut self) -> Expression;
+    fn parse_term(&mut self) -> Result<Expression>;
     /// Parses factor expressions.
     ///
     /// factor -> unary (("*" | "/") factor)*;
-    fn parse_factor(&mut self) -> Expression;
+    fn parse_factor(&mut self) -> Result<Expression>;
     /// Parses unary expressions.
     ///
     /// unary -> ("!" | "-") unary | primary;
-    fn parse_unary(&mut self) -> Expression;
+    fn parse_unary(&mut self) -> Result<Expression>;
     /// Parses literal expressions.
     ///
     /// primary -> NUMBER | STRING | "true" | "false" | "null" | "(" expression ")";
-    fn parse_primary(&mut self) -> Expression;
+    fn parse_primary(&mut self) -> Result<Expression>;
 }
 
 /// Holds the Abstract Syntax Tree (AST) expressions built from given Tokens.
@@ -81,25 +84,29 @@ impl<I: Iterator<Item = Token>> AST<I> {
 }
 
 impl<I: Iterator<Item = Token>> Parser for AST<I> {
-    fn parse_expression(&mut self) -> Expression {
+    fn parse_expression(&mut self) -> Result<Expression> {
         self.parse_equality()
     }
 
-    fn parse_equality(&mut self) -> Expression {
-        let left_expr = self.parse_comparison();
+    fn parse_equality(&mut self) -> Result<Expression> {
+        let left_expr = self.parse_comparison()?;
 
         while let Some(operator) = self.tokens.next_if(|next| {
             next.kind == TokenKind::DoubleEqual || next.kind == TokenKind::BangEqual
         }) {
-            let right_expr = self.parse_comparison();
-            return Expression::Binary(left_expr.as_box(), operator, right_expr.as_box());
+            let right_expr = self.parse_comparison()?;
+            return Ok(Expression::Binary(
+                left_expr.as_box(),
+                operator,
+                right_expr.as_box(),
+            ));
         }
 
-        left_expr
+        Ok(left_expr)
     }
 
-    fn parse_comparison(&mut self) -> Expression {
-        let left_expr = self.parse_term();
+    fn parse_comparison(&mut self) -> Result<Expression> {
+        let left_expr = self.parse_term()?;
 
         while let Some(operator) = self.tokens.next_if(|next| {
             next.kind == TokenKind::Great
@@ -107,55 +114,67 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
                 || next.kind == TokenKind::Less
                 || next.kind == TokenKind::LessEqual
         }) {
-            let right_expr = self.parse_term();
-            return Expression::Binary(left_expr.as_box(), operator, right_expr.as_box());
+            let right_expr = self.parse_term()?;
+            return Ok(Expression::Binary(
+                left_expr.as_box(),
+                operator,
+                right_expr.as_box(),
+            ));
         }
 
-        left_expr
+        Ok(left_expr)
     }
 
-    fn parse_term(&mut self) -> Expression {
-        let left_expr = self.parse_factor();
+    fn parse_term(&mut self) -> Result<Expression> {
+        let left_expr = self.parse_factor()?;
 
         while let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Plus || next.kind == TokenKind::Minus)
         {
-            let right_expr = self.parse_factor();
-            return Expression::Binary(left_expr.as_box(), operator, right_expr.as_box());
+            let right_expr = self.parse_factor()?;
+            return Ok(Expression::Binary(
+                left_expr.as_box(),
+                operator,
+                right_expr.as_box(),
+            ));
         }
 
-        left_expr
+        Ok(left_expr)
     }
 
-    fn parse_factor(&mut self) -> Expression {
-        let left_expr = self.parse_unary();
+    fn parse_factor(&mut self) -> Result<Expression> {
+        let left_expr = self.parse_unary()?;
 
         while let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Star || next.kind == TokenKind::Slash)
         {
-            let right_expr = self.parse_unary();
-            return Expression::Binary(left_expr.as_box(), operator, right_expr.as_box());
+            let right_expr = self.parse_unary()?;
+            return Ok(Expression::Binary(
+                left_expr.as_box(),
+                operator,
+                right_expr.as_box(),
+            ));
         }
 
-        left_expr
+        Ok(left_expr)
     }
 
-    fn parse_unary(&mut self) -> Expression {
+    fn parse_unary(&mut self) -> Result<Expression> {
         if let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Bang || next.kind == TokenKind::Minus)
         {
-            let target_expr = self.parse_unary();
+            let target_expr = self.parse_unary()?;
 
-            return Expression::Unary(operator, target_expr.as_box());
+            return Ok(Expression::Unary(operator, target_expr.as_box()));
         }
 
         self.parse_primary()
     }
 
-    fn parse_primary(&mut self) -> Expression {
+    fn parse_primary(&mut self) -> Result<Expression> {
         if let Some(token) = self.tokens.next() {
             let expr = match token.kind {
                 TokenKind::Number => Expression::Number(
@@ -179,7 +198,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
                 ),
                 TokenKind::Null => Expression::Null(None),
                 TokenKind::LeftParentheses => {
-                    let grouped_expr = self.parse_expression();
+                    let grouped_expr = self.parse_expression()?;
                     self.tokens.next();
                     Expression::Group(grouped_expr.as_box())
                 }
@@ -189,7 +208,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
                 ),
             };
 
-            return expr;
+            return Ok(expr);
         }
 
         todo!("implement what happens when it ends")
@@ -226,7 +245,7 @@ mod ast_tests {
 
         for expected_expr in expected_expressions {
             assert_eq!(
-                ast.parse_primary(),
+                ast.parse_primary().unwrap(),
                 expected_expr,
                 "should parse primary single token based expression"
             )
@@ -246,7 +265,7 @@ mod ast_tests {
 
         let mut ast = AST::new(tokens.into_iter());
         assert_eq!(
-            ast.parse_primary(),
+            ast.parse_primary().unwrap(),
             expected_expression,
             "should parse primary grouping expression"
         )
@@ -278,7 +297,7 @@ mod ast_tests {
             let mut ast = AST::new(tokens.into_iter());
 
             assert_eq!(
-                ast.parse_unary(),
+                ast.parse_unary().unwrap(),
                 expected_expressions[i],
                 "should parse unary expressions"
             )
@@ -320,7 +339,7 @@ mod ast_tests {
         for (i, tokens) in token_combinations.into_iter().enumerate() {
             let mut ast = AST::new(tokens.into_iter());
             assert_eq!(
-                ast.parse_factor(),
+                ast.parse_factor().unwrap(),
                 expected_expressions[i],
                 "should parse factor expressions"
             )
@@ -362,7 +381,7 @@ mod ast_tests {
         for (i, tokens) in token_combinations.into_iter().enumerate() {
             let mut ast = AST::new(tokens.into_iter());
             assert_eq!(
-                ast.parse_term(),
+                ast.parse_term().unwrap(),
                 expected_expressions[i],
                 "should parse term expressions"
             )
@@ -426,7 +445,7 @@ mod ast_tests {
         for (i, tokens) in token_combinations.into_iter().enumerate() {
             let mut ast = AST::new(tokens.into_iter());
             assert_eq!(
-                ast.parse_comparison(),
+                ast.parse_comparison().unwrap(),
                 expected_expressions[i],
                 "should parse comparison expressions"
             )
@@ -468,7 +487,7 @@ mod ast_tests {
         for (i, tokens) in token_combinations.into_iter().enumerate() {
             let mut ast = AST::new(tokens.into_iter());
             assert_eq!(
-                ast.parse_equality(),
+                ast.parse_equality().unwrap(),
                 expected_expressions[i],
                 "should parse term expressions"
             )
