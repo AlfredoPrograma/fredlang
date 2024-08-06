@@ -71,11 +71,17 @@ trait Parser {
 }
 
 /// Holds the Abstract Syntax Tree (AST) expressions built from given Tokens.
-pub struct AST<I: Iterator<Item = Token>> {
+pub struct AST<I>
+where
+    I: Iterator<Item = Token>,
+{
     tokens: Peekable<I>,
 }
 
-impl<I: Iterator<Item = Token>> AST<I> {
+impl<I> AST<I>
+where
+    I: Iterator<Item = Token>,
+{
     pub fn new(tokens: I) -> Self {
         Self {
             tokens: tokens.peekable(),
@@ -83,7 +89,10 @@ impl<I: Iterator<Item = Token>> AST<I> {
     }
 }
 
-impl<I: Iterator<Item = Token>> Parser for AST<I> {
+impl<I> Parser for AST<I>
+where
+    I: Iterator<Item = Token>,
+{
     fn parse_expression(&mut self) -> Result<Expression> {
         self.parse_equality()
     }
@@ -91,7 +100,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
     fn parse_equality(&mut self) -> Result<Expression> {
         let left_expr = self.parse_comparison()?;
 
-        while let Some(operator) = self.tokens.next_if(|next| {
+        if let Some(operator) = self.tokens.next_if(|next| {
             next.kind == TokenKind::DoubleEqual || next.kind == TokenKind::BangEqual
         }) {
             let right_expr = self.parse_comparison()?;
@@ -108,7 +117,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
     fn parse_comparison(&mut self) -> Result<Expression> {
         let left_expr = self.parse_term()?;
 
-        while let Some(operator) = self.tokens.next_if(|next| {
+        if let Some(operator) = self.tokens.next_if(|next| {
             next.kind == TokenKind::Great
                 || next.kind == TokenKind::GreatEqual
                 || next.kind == TokenKind::Less
@@ -128,7 +137,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
     fn parse_term(&mut self) -> Result<Expression> {
         let left_expr = self.parse_factor()?;
 
-        while let Some(operator) = self
+        if let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Plus || next.kind == TokenKind::Minus)
         {
@@ -146,7 +155,7 @@ impl<I: Iterator<Item = Token>> Parser for AST<I> {
     fn parse_factor(&mut self) -> Result<Expression> {
         let left_expr = self.parse_unary()?;
 
-        while let Some(operator) = self
+        if let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Star || next.kind == TokenKind::Slash)
         {
