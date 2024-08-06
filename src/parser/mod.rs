@@ -1,2 +1,2 @@
 mod ast;
-mod expressions;
+pub mod expressions;

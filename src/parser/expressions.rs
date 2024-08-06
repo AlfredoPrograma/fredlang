@@ -37,7 +37,7 @@ impl fmt::Display for Expression {
 }
 
 impl Expression {
-    fn as_box(self) -> Box<Self> {
+    pub fn as_box(self) -> Box<Self> {
         Box::new(self)
     }
 }

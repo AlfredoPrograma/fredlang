@@ -2,6 +2,7 @@ use std::{env, fs, io::Read};
 
 use prelude::Result;
 
+mod interpreter;
 mod parser;
 mod prelude;
 mod scanner;
