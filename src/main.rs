@@ -2,7 +2,7 @@ use std::{env, fs, io::Read};
 
 use prelude::Result;
 
-mod ast;
+mod parser;
 mod prelude;
 mod scanner;
 mod tokens;
