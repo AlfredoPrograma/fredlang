@@ -43,31 +43,31 @@ impl Expression {
 /// Provides the required methods for parse the AST expressions.
 trait Parser {
     /// Parses the top level expression for AST.
-    fn parse_expression(&mut self) -> Result<Expression>;
+    fn parse_expression(&mut self) -> Option<Expression>;
     /// Parses equality expressions.
     ///
     /// equality -> comparison (("!=" | "==") comparison)*;
-    fn parse_equality(&mut self) -> Result<Expression>;
+    fn parse_equality(&mut self) -> Option<Expression>;
     /// Parses comparison expressions.
     ///
     /// comparison -> term ((">=" | ">" | "<=" | "<") term)*;
-    fn parse_comparison(&mut self) -> Result<Expression>;
+    fn parse_comparison(&mut self) -> Option<Expression>;
     /// Parses term expressions.
     ///
     /// term -> factor (("+" | "-") factor)*;
-    fn parse_term(&mut self) -> Result<Expression>;
+    fn parse_term(&mut self) -> Option<Expression>;
     /// Parses factor expressions.
     ///
     /// factor -> unary (("*" | "/") factor)*;
-    fn parse_factor(&mut self) -> Result<Expression>;
+    fn parse_factor(&mut self) -> Option<Expression>;
     /// Parses unary expressions.
     ///
     /// unary -> ("!" | "-") unary | primary;
-    fn parse_unary(&mut self) -> Result<Expression>;
+    fn parse_unary(&mut self) -> Option<Expression>;
     /// Parses literal expressions.
     ///
     /// primary -> NUMBER | STRING | "true" | "false" | "null" | "(" expression ")";
-    fn parse_primary(&mut self) -> Result<Expression>;
+    fn parse_primary(&mut self) -> Option<Expression>;
 }
 
 /// Holds the Abstract Syntax Tree (AST) expressions built from given Tokens.
@@ -93,28 +93,28 @@ impl<I> Parser for AST<I>
 where
     I: Iterator<Item = Token>,
 {
-    fn parse_expression(&mut self) -> Result<Expression> {
+    fn parse_expression(&mut self) -> Option<Expression> {
         self.parse_equality()
     }
 
-    fn parse_equality(&mut self) -> Result<Expression> {
+    fn parse_equality(&mut self) -> Option<Expression> {
         let left_expr = self.parse_comparison()?;
 
         if let Some(operator) = self.tokens.next_if(|next| {
             next.kind == TokenKind::DoubleEqual || next.kind == TokenKind::BangEqual
         }) {
             let right_expr = self.parse_comparison()?;
-            return Ok(Expression::Binary(
+            return Some(Expression::Binary(
                 left_expr.as_box(),
                 operator,
                 right_expr.as_box(),
             ));
         }
 
-        Ok(left_expr)
+        Some(left_expr)
     }
 
-    fn parse_comparison(&mut self) -> Result<Expression> {
+    fn parse_comparison(&mut self) -> Option<Expression> {
         let left_expr = self.parse_term()?;
 
         if let Some(operator) = self.tokens.next_if(|next| {
@@ -124,17 +124,17 @@ where
                 || next.kind == TokenKind::LessEqual
         }) {
             let right_expr = self.parse_term()?;
-            return Ok(Expression::Binary(
+            return Some(Expression::Binary(
                 left_expr.as_box(),
                 operator,
                 right_expr.as_box(),
             ));
         }
 
-        Ok(left_expr)
+        Some(left_expr)
     }
 
-    fn parse_term(&mut self) -> Result<Expression> {
+    fn parse_term(&mut self) -> Option<Expression> {
         let left_expr = self.parse_factor()?;
 
         if let Some(operator) = self
@@ -142,17 +142,17 @@ where
             .next_if(|next| next.kind == TokenKind::Plus || next.kind == TokenKind::Minus)
         {
             let right_expr = self.parse_factor()?;
-            return Ok(Expression::Binary(
+            return Some(Expression::Binary(
                 left_expr.as_box(),
                 operator,
                 right_expr.as_box(),
             ));
         }
 
-        Ok(left_expr)
+        Some(left_expr)
     }
 
-    fn parse_factor(&mut self) -> Result<Expression> {
+    fn parse_factor(&mut self) -> Option<Expression> {
         let left_expr = self.parse_unary()?;
 
         if let Some(operator) = self
@@ -160,30 +160,30 @@ where
             .next_if(|next| next.kind == TokenKind::Star || next.kind == TokenKind::Slash)
         {
             let right_expr = self.parse_unary()?;
-            return Ok(Expression::Binary(
+            return Some(Expression::Binary(
                 left_expr.as_box(),
                 operator,
                 right_expr.as_box(),
             ));
         }
 
-        Ok(left_expr)
+        Some(left_expr)
     }
 
-    fn parse_unary(&mut self) -> Result<Expression> {
+    fn parse_unary(&mut self) -> Option<Expression> {
         if let Some(operator) = self
             .tokens
             .next_if(|next| next.kind == TokenKind::Bang || next.kind == TokenKind::Minus)
         {
             let target_expr = self.parse_unary()?;
 
-            return Ok(Expression::Unary(operator, target_expr.as_box()));
+            return Some(Expression::Unary(operator, target_expr.as_box()));
         }
 
         self.parse_primary()
     }
 
-    fn parse_primary(&mut self) -> Result<Expression> {
+    fn parse_primary(&mut self) -> Option<Expression> {
         if let Some(token) = self.tokens.next() {
             let expr = match token.kind {
                 TokenKind::Number => Expression::Number(
@@ -217,7 +217,7 @@ where
                 ),
             };
 
-            return Ok(expr);
+            return Some(expr);
         }
 
         todo!("implement what happens when it ends")
