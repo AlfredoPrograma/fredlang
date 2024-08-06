@@ -157,7 +157,6 @@ where
         self.parse_primary()
     }
 
-    // ( "inside group" +
     fn parse_primary(&mut self) -> Option<Expression> {
         if let Some(token) = self.tokens.next() {
             let expr = match token.kind {
@@ -186,10 +185,8 @@ where
 
                     if let Some(closing) = self.tokens.next() {
                         if closing.kind != TokenKind::RightParentheses {
-                            self.errors.push(ParseError::unexpected_token(
-                                ")".to_string(),
-                                closing.lexeme,
-                            ))
+                            self.errors
+                                .push(ParseError::UnexpectedToken(")".to_string(), closing.lexeme))
                         }
                     }
 
@@ -198,7 +195,7 @@ where
 
                 // All tokens should be handled
                 _ => {
-                    self.errors.push(ParseError::expected_expression());
+                    self.errors.push(ParseError::ExpectedExpression);
                     return None;
                 }
             };
@@ -278,7 +275,7 @@ mod ast_tests {
             // Notice here closing parentheses token needed but got number token
             Token::new("1".to_string(), TokenKind::Number, 1),
         ];
-        let expected_errors = vec![ParseError::unexpected_token(
+        let expected_errors = vec![ParseError::UnexpectedToken(
             ")".to_string(),
             "1".to_string(),
         )];
@@ -287,7 +284,7 @@ mod ast_tests {
         ast.parse_primary();
 
         for (i, error) in ast.errors.into_iter().enumerate() {
-            assert_eq!(error.message, expected_errors[i].message)
+            assert_eq!(error.to_string(), expected_errors[i].to_string())
         }
     }
 
