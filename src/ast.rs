@@ -1,9 +1,9 @@
-use std::{fmt, iter::Peekable};
-
-use crate::{
-    prelude::Result,
-    tokens::{Token, TokenKind},
+use std::{
+    fmt::{self, Debug},
+    iter::Peekable,
 };
+
+use crate::tokens::{Token, TokenKind};
 
 #[derive(Debug, PartialEq)]
 /// Represents the expressions available for the AST.
@@ -42,6 +42,8 @@ impl Expression {
 
 /// Provides the required methods for parse the AST expressions.
 trait Parser {
+    /// Runs the parser
+
     /// Parses the top level expression for AST.
     fn parse_expression(&mut self) -> Option<Expression>;
     /// Parses equality expressions.
@@ -68,30 +70,64 @@ trait Parser {
     ///
     /// primary -> NUMBER | STRING | "true" | "false" | "null" | "(" expression ")";
     fn parse_primary(&mut self) -> Option<Expression>;
+    /// Synchronizes the state of the parser on panic mode.
+    ///
+    /// It search for the end of statement (usually a semicolon or some keyword token) and restarts the parser to start parsing from new statement.
+    fn sync() {
+        todo!("implement sync")
+    }
+}
+
+#[derive(Debug)]
+/// Describes a parse error due an invalid syntax and unexpected token.
+struct ParseError {
+    message: String,
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl ParseError {
+    fn unexpected_token(expected: String, got: String) -> Self {
+        Self {
+            message: format!("invalid token found, expected \"{expected}\" but got \"{got}\""),
+        }
+    }
+
+    fn expected_expression() -> Self {
+        Self {
+            message: "expected expression".to_string(),
+        }
+    }
 }
 
 /// Holds the Abstract Syntax Tree (AST) expressions built from given Tokens.
 pub struct AST<I>
 where
-    I: Iterator<Item = Token>,
+    I: Iterator<Item = Token> + Debug,
 {
     tokens: Peekable<I>,
+    errors: Vec<ParseError>,
 }
 
 impl<I> AST<I>
 where
-    I: Iterator<Item = Token>,
+    I: Iterator<Item = Token> + Debug,
 {
     pub fn new(tokens: I) -> Self {
         Self {
             tokens: tokens.peekable(),
+            errors: Vec::new(),
         }
     }
 }
 
 impl<I> Parser for AST<I>
 where
-    I: Iterator<Item = Token>,
+    I: Iterator<Item = Token> + Debug,
 {
     fn parse_expression(&mut self) -> Option<Expression> {
         self.parse_equality()
@@ -183,6 +219,7 @@ where
         self.parse_primary()
     }
 
+    // ( "inside group" +
     fn parse_primary(&mut self) -> Option<Expression> {
         if let Some(token) = self.tokens.next() {
             let expr = match token.kind {
@@ -208,19 +245,31 @@ where
                 TokenKind::Null => Expression::Null(None),
                 TokenKind::LeftParentheses => {
                     let grouped_expr = self.parse_expression()?;
-                    self.tokens.next();
+
+                    if let Some(closing) = self.tokens.next() {
+                        if closing.kind != TokenKind::RightParentheses {
+                            self.errors.push(ParseError::unexpected_token(
+                                ")".to_string(),
+                                closing.lexeme,
+                            ))
+                        }
+                    }
+
                     Expression::Group(grouped_expr.as_box())
                 }
 
-                _ => todo!(
-                    "implement what happens if token does match with anything (some error I think)"
-                ),
+                // All tokens should be handled
+                _ => {
+                    self.errors.push(ParseError::expected_expression());
+                    return None;
+                }
             };
 
             return Some(expr);
         }
 
-        todo!("implement what happens when it ends")
+        println!("Outside parse_primary fn");
+        unreachable!("I think this is unreachable")
     }
 }
 
@@ -229,7 +278,7 @@ mod ast_tests {
     // TODO: there is a lot of repetition for testing code. Try to refactor it to reuse some tokens definitions
     use crate::tokens::{Token, TokenKind};
 
-    use super::{Expression, Parser, AST};
+    use super::{Expression, ParseError, Parser, AST};
 
     #[test]
     /// Checks the expression building for single token expressions.
@@ -269,15 +318,39 @@ mod ast_tests {
             Token::new("inside group".to_string(), TokenKind::String, 1),
             Token::new(")".to_string(), TokenKind::RightParentheses, 1),
         ];
+
         let expected_expression =
             Expression::Group(Expression::String("inside group".to_string()).as_box());
 
         let mut ast = AST::new(tokens.into_iter());
+
         assert_eq!(
             ast.parse_primary().unwrap(),
             expected_expression,
             "should parse primary grouping expression"
         )
+    }
+
+    #[test]
+    /// Checks the invalid grouping expression.
+    fn create_error_for_invalid_grouping_expression() {
+        let tokens = vec![
+            Token::new("(".to_string(), TokenKind::LeftParentheses, 1),
+            Token::new("inside group".to_string(), TokenKind::String, 1),
+            // Notice here closing parentheses token needed but got number token
+            Token::new("1".to_string(), TokenKind::Number, 1),
+        ];
+        let expected_errors = vec![ParseError::unexpected_token(
+            ")".to_string(),
+            "1".to_string(),
+        )];
+
+        let mut ast = AST::new(tokens.into_iter());
+        ast.parse_primary();
+
+        for (i, error) in ast.errors.into_iter().enumerate() {
+            assert_eq!(error.message, expected_errors[i].message)
+        }
     }
 
     #[test]

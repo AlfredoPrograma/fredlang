@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::prelude::Result;
 
+// TODO: maybe add lexeme to inside token.
 /// `TokenKind` is the type used for describe the kind of the extracted valid lexeme of the source code.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenKind {
