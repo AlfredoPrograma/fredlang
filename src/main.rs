@@ -5,6 +5,7 @@ use prelude::Result;
 mod interpreter;
 mod parser;
 mod prelude;
+mod repl;
 mod scanner;
 mod tokens;
 

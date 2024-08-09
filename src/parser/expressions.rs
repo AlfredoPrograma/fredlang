@@ -67,6 +67,10 @@ impl<I> Parser for AST<I>
 where
     I: Iterator<Item = Token> + Debug,
 {
+    fn parse(&mut self) -> Option<Expression> {
+        self.parse_expression()
+    }
+
     fn parse_expression(&mut self) -> Option<Expression> {
         self.parse_equality()
     }

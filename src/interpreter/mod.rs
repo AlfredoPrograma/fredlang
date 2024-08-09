@@ -1,7 +1,7 @@
 use std::{any::Any, fmt::Display};
 
 mod evaluator;
-mod runtime;
+pub mod runtime;
 
 /// Wrapper over `Box<dyn Any>` to provide inject `Display` trait.
 pub struct Output(Box<dyn Any>);

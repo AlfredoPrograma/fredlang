@@ -1,5 +1,3 @@
-use std::any;
-
 use crate::{parser::expressions::Expression, prelude::Result, tokens::TokenKind};
 
 use super::{evaluator::Evaluator, Output};
@@ -8,10 +6,10 @@ const INVALID_UNARY_OPERATOR: &'static str = "invalid unary operator";
 const INVALID_BINARY_OPERATOR: &'static str = "invalid binary operator";
 
 /// It is responsible of take the built AST and execute its operations.
-struct Interpreter;
+pub struct Interpreter;
 
 impl Interpreter {
-    fn evaluate(expr: Expression) -> Result<Output> {
+    pub fn evaluate(expr: Expression) -> Result<Output> {
         match expr {
             Expression::Number(n) => Ok(Output(Box::new(n))),
             Expression::String(s) => Ok(Output(Box::new(s))),
