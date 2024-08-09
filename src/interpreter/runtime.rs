@@ -2,84 +2,53 @@ use std::any;
 
 use crate::{parser::expressions::Expression, prelude::Result, tokens::TokenKind};
 
+use super::evaluator::Evaluator;
+
+const INVALID_UNARY_OPERATOR: &'static str = "invalid unary operator";
+const INVALID_BINARY_OPERATOR: &'static str = "invalid binary operator";
+
 /// It is responsible of take the built AST and execute its operations.
-struct Interpreter {
-    root: Expression,
-}
+struct Interpreter;
 
 impl Interpreter {
-    pub fn new(root: Expression) -> Self {
-        Self { root }
-    }
-}
-
-impl Interpreter {
-    pub fn evaluate(self) -> Result<Box<dyn any::Any>> {
-        Self::evaluate_recursive(self.root)
-    }
-
-    fn evaluate_recursive(expr: Expression) -> Result<Box<dyn any::Any>> {
+    fn evaluate(expr: Expression) -> Result<Box<dyn any::Any>> {
         match expr {
             Expression::Number(n) => Ok(Box::new(n)),
             Expression::String(s) => Ok(Box::new(s)),
             Expression::Boolean(b) => Ok(Box::new(b)),
             Expression::Null(opt) => Ok(Box::new(opt)),
             Expression::Unary(operator, expr) => {
-                let value = Self::evaluate_recursive(*expr)?;
-
+                let value = Self::evaluate(*expr)?;
                 match operator.kind {
-                    TokenKind::Minus => {
-                        let number = value
-                            .downcast_ref::<f32>()
-                            .ok_or("cannot evaluate expression as number")?;
-
-                        Ok(Box::new(-number))
-                    }
-                    TokenKind::Bang => {
-                        let boolean = value
-                            .downcast_ref::<bool>()
-                            .ok_or("negation operation over non boolean values is invalid")?;
-
-                        Ok(Box::new(!*boolean))
-                    }
-                    _ => Err("invalid unary operator".into()),
+                    TokenKind::Minus => Evaluator::negate_number(value),
+                    TokenKind::Bang => Evaluator::negate_boolean(value),
+                    _ => Err(INVALID_UNARY_OPERATOR.into()),
                 }
             }
             Expression::Binary(left_expr, operator, right_expr) => {
-                let left_expr = Self::evaluate_recursive(*left_expr)?;
-                let left_value = left_expr
-                    .downcast_ref::<f32>()
-                    .ok_or("cannot evaluate expression as number")?;
-
-                let right_expr = Self::evaluate_recursive(*right_expr)?;
-                let right_value = right_expr
-                    .downcast_ref::<f32>()
-                    .ok_or("cannot evaluate expression as number")?;
+                let left_expr = Self::evaluate(*left_expr)?;
+                let right_expr = Self::evaluate(*right_expr)?;
 
                 match operator.kind {
-                    // Arithmetic binary operations
-                    TokenKind::Plus => Ok(Box::new(left_value + right_value)),
-                    TokenKind::Minus => Ok(Box::new(left_value - right_value)),
-                    TokenKind::Star => Ok(Box::new(left_value * right_value)),
-                    TokenKind::Slash => {
-                        if *right_value == 0.0 {
-                            return Err("cannot divide by zero".into());
-                        }
-
-                        Ok(Box::new(left_value / right_value))
+                    // Arithmetic operations
+                    TokenKind::Plus | TokenKind::Minus | TokenKind::Star | TokenKind::Slash => {
+                        Evaluator::compute_arithmetic(left_expr, operator, right_expr)
                     }
 
-                    // Comparison binary operations
-                    TokenKind::Great => Ok(Box::new(left_value > right_value)),
-                    TokenKind::GreatEqual => Ok(Box::new(left_value >= right_value)),
-                    TokenKind::Less => Ok(Box::new(left_value < right_value)),
-                    TokenKind::LessEqual => Ok(Box::new(left_value <= right_value)),
+                    // Comparison operations
+                    TokenKind::Great
+                    | TokenKind::GreatEqual
+                    | TokenKind::Less
+                    | TokenKind::LessEqual => {
+                        Evaluator::compute_comparison(left_expr, operator, right_expr)
+                    }
 
-                    // Equality binary operations
-                    TokenKind::DoubleEqual => Ok(Box::new(left_value == right_value)),
-                    TokenKind::BangEqual => Ok(Box::new(left_value != right_value)),
+                    // Equality operations
+                    TokenKind::DoubleEqual | TokenKind::BangEqual => {
+                        Evaluator::compute_equality(left_expr, operator, right_expr)
+                    }
 
-                    _ => Err("invalid binary operator".into()),
+                    _ => Err(INVALID_BINARY_OPERATOR.into()),
                 }
             }
             _ => todo!("implement"),
@@ -100,9 +69,7 @@ mod interpreter_tests {
     fn evaluate_number_expr() {
         let number_expr = Expression::Number(10.0);
         assert!(
-            Interpreter::new(number_expr)
-                .evaluate()
-                .is_ok_and(|value| value.downcast::<f32>().is_ok()),
+            Interpreter::evaluate(number_expr).is_ok_and(|value| value.downcast::<f32>().is_ok()),
             "should extract number value from number expression"
         )
     }
@@ -112,8 +79,7 @@ mod interpreter_tests {
         let string_expr = Expression::String("Hello world".to_string());
 
         assert!(
-            Interpreter::new(string_expr)
-                .evaluate()
+            Interpreter::evaluate(string_expr)
                 .is_ok_and(|value| value.downcast::<String>().is_ok()),
             "should extract string value from string expression"
         )
@@ -124,21 +90,20 @@ mod interpreter_tests {
         let true_expr = Expression::Boolean(true);
         let false_expr = Expression::Boolean(false);
 
-        assert!(Interpreter::new(true_expr)
-            .evaluate()
-            .is_ok_and(|value| value.downcast::<bool>().is_ok()));
+        assert!(
+            Interpreter::evaluate(true_expr).is_ok_and(|value| value.downcast::<bool>().is_ok())
+        );
 
-        assert!(Interpreter::new(false_expr)
-            .evaluate()
-            .is_ok_and(|value| value.downcast::<bool>().is_ok()));
+        assert!(
+            Interpreter::evaluate(false_expr).is_ok_and(|value| value.downcast::<bool>().is_ok())
+        );
     }
 
     #[test]
     fn evaluate_null_expr() {
         let null_expr = Expression::Null(None);
 
-        assert!(Interpreter::new(null_expr)
-            .evaluate()
+        assert!(Interpreter::evaluate(null_expr)
             .is_ok_and(|value| value.downcast::<Option<Box<Expression>>>().is_ok()))
     }
 
@@ -158,9 +123,7 @@ mod interpreter_tests {
         let expected_values = vec![Box::new(-10.0), Box::new(2.0)];
 
         for (i, expr) in number_exprs.into_iter().enumerate() {
-            let interpreter = Interpreter::new(expr);
-
-            assert!(interpreter.evaluate().is_ok_and(|value| value
+            assert!(Interpreter::evaluate(expr).is_ok_and(|value| value
                 .downcast::<f32>()
                 .is_ok_and(|number| number == expected_values[i])))
         }
@@ -182,9 +145,9 @@ mod interpreter_tests {
         let expected_values = vec![Box::new(false), Box::new(true)];
 
         for (i, expr) in boolean_exprs.into_iter().enumerate() {
-            let interpreter = Interpreter::new(expr);
+            let value = Interpreter::evaluate(expr);
 
-            assert!(interpreter.evaluate().is_ok_and(|value| value
+            assert!(value.is_ok_and(|value| value
                 .downcast::<bool>()
                 .is_ok_and(|boolean| boolean == expected_values[i])))
         }
@@ -217,9 +180,7 @@ mod interpreter_tests {
         let expected_values = vec![Box::new(15.0), Box::new(5.0), Box::new(50.0), Box::new(2.0)];
 
         for (i, expr) in arithmethic_exprs.into_iter().enumerate() {
-            let interpreter = Interpreter::new(expr);
-
-            assert!(interpreter.evaluate().is_ok_and(|value| value
+            assert!(Interpreter::evaluate(expr).is_ok_and(|value| value
                 .downcast::<f32>()
                 .is_ok_and(|result| result == expected_values[i])))
         }
@@ -261,9 +222,7 @@ mod interpreter_tests {
         ];
 
         for expr in comparison_exprs {
-            let interpreter = Interpreter::new(expr);
-
-            assert!(interpreter.evaluate().is_ok_and(|value| value
+            assert!(Interpreter::evaluate(expr).is_ok_and(|value| value
                 .downcast::<bool>()
                 .is_ok_and(|boolean| *boolean == true)))
         }
@@ -285,8 +244,7 @@ mod interpreter_tests {
         ];
 
         for expr in equality_exprs {
-            let interpreter = Interpreter::new(expr);
-            assert!(interpreter.evaluate().is_ok_and(|value| value
+            assert!(Interpreter::evaluate(expr).is_ok_and(|value| value
                 .downcast::<bool>()
                 .is_ok_and(|boolean| *boolean == true)))
         }
