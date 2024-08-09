@@ -5,6 +5,8 @@ use crate::{
     tokens::{Token, TokenKind},
 };
 
+use super::Output;
+
 const CANNOT_EVALUATE_AS_NUMBER: &'static str = "cannot evaluate dynamic expression as number";
 const CANNOT_EVALUATE_AS_BOOLEAN: &'static str = "cannot evaluate dynamic expression as boolean";
 const CANNOT_DIVIDE_BY_ZERO: &'static str = "cannot divide by zero";
@@ -32,18 +34,15 @@ pub struct Evaluator;
 
 impl Evaluator {
     /// Tries to downcast the given dynamic value as number and returns its negative version.
-    pub fn negate_number(value: Box<dyn Any>) -> Result<Box<dyn Any>> {
+    pub fn negate_number(value: Box<dyn Any>) -> Result<Output> {
         let number = downcast_to_number(value)?;
-        Ok(Box::new(-number))
+        Ok(Output(Box::new(-number)))
     }
 
     /// Tries to downcast the given dynamic value to boolean and returns its negated version.
-    pub fn negate_boolean(value: Box<dyn Any>) -> Result<Box<dyn Any>> {
-        let boolean = value
-            .downcast_ref::<bool>()
-            .ok_or(CANNOT_EVALUATE_AS_BOOLEAN)?;
-
-        Ok(Box::new(!boolean))
+    pub fn negate_boolean(value: Box<dyn Any>) -> Result<Output> {
+        let boolean = downcast_to_boolean(value)?;
+        Ok(Output(Box::new(!boolean)))
     }
 
     /// Tries to downcast given dynamic values to numbers and performs arithmetic operation based on the provided token.
@@ -51,20 +50,20 @@ impl Evaluator {
         left_value: Box<dyn Any>,
         arithmetic_operator: Token,
         right_value: Box<dyn Any>,
-    ) -> Result<Box<dyn Any>> {
+    ) -> Result<Output> {
         let left_number = downcast_to_number(left_value)?;
         let right_number = downcast_to_number(right_value)?;
 
         match arithmetic_operator.kind {
-            TokenKind::Plus => Ok(Box::new(left_number + right_number)),
-            TokenKind::Minus => Ok(Box::new(left_number - right_number)),
-            TokenKind::Star => Ok(Box::new(left_number * right_number)),
+            TokenKind::Plus => Ok(Output(Box::new(left_number + right_number))),
+            TokenKind::Minus => Ok(Output(Box::new(left_number - right_number))),
+            TokenKind::Star => Ok(Output(Box::new(left_number * right_number))),
             TokenKind::Slash => {
                 if right_number == 0.0 {
                     return Err(CANNOT_DIVIDE_BY_ZERO.into());
                 }
 
-                Ok(Box::new(left_number / right_number))
+                Ok(Output(Box::new(left_number / right_number)))
             }
 
             _ => Err(INVALID_ARITHMETIC_OPERATION.into()),
@@ -77,15 +76,15 @@ impl Evaluator {
         left_value: Box<dyn Any>,
         comparison_operator: Token,
         right_value: Box<dyn Any>,
-    ) -> Result<Box<dyn Any>> {
+    ) -> Result<Output> {
         let left_number = downcast_to_number(left_value)?;
         let right_number = downcast_to_number(right_value)?;
 
         match comparison_operator.kind {
-            TokenKind::Great => Ok(Box::new(left_number > right_number)),
-            TokenKind::GreatEqual => Ok(Box::new(left_number >= right_number)),
-            TokenKind::Less => Ok(Box::new(left_number < right_number)),
-            TokenKind::LessEqual => Ok(Box::new(left_number <= right_number)),
+            TokenKind::Great => Ok(Output(Box::new(left_number > right_number))),
+            TokenKind::GreatEqual => Ok(Output(Box::new(left_number >= right_number))),
+            TokenKind::Less => Ok(Output(Box::new(left_number < right_number))),
+            TokenKind::LessEqual => Ok(Output(Box::new(left_number <= right_number))),
 
             _ => Err(INVALID_COMPARISON_OPERATION.into()),
         }
@@ -97,13 +96,13 @@ impl Evaluator {
         left_value: Box<dyn Any>,
         equality_operator: Token,
         right_value: Box<dyn Any>,
-    ) -> Result<Box<dyn Any>> {
+    ) -> Result<Output> {
         let left_number = downcast_to_number(left_value)?;
         let right_number = downcast_to_number(right_value)?;
 
         match equality_operator.kind {
-            TokenKind::DoubleEqual => Ok(Box::new(left_number == right_number)),
-            TokenKind::BangEqual => Ok(Box::new(left_number != right_number)),
+            TokenKind::DoubleEqual => Ok(Output(Box::new(left_number == right_number))),
+            TokenKind::BangEqual => Ok(Output(Box::new(left_number != right_number))),
 
             _ => Err(INVALID_EQUALITY_OPERATION.into()),
         }
