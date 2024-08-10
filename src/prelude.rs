@@ -14,6 +14,5 @@ pub fn execute_code(source: &str) -> Result<Output> {
     scanner.scan_tokens();
     let mut ast = AST::new(scanner.tokens.into_iter());
     let expressions = ast.parse();
-
     Interpreter::evaluate(expressions.unwrap())
 }

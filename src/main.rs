@@ -24,15 +24,6 @@ fn read_source() -> Result<String> {
 }
 
 fn main() -> Result<()> {
-    let content = read_source()?;
-
-    let mut scanner = scanner::Scanner::new(&content);
-
-    scanner.scan_tokens();
-
-    for token in scanner.tokens {
-        println!("{:#?}", token)
-    }
-
+    repl::Repl::run();
     Ok(())
 }
