@@ -3,6 +3,7 @@ use std::{env, fs, io::Read};
 use prelude::Result;
 
 mod interpreter;
+mod multipeek;
 mod parser;
 mod prelude;
 mod repl;

@@ -3,7 +3,10 @@ use std::{
     iter::Peekable,
 };
 
-use crate::tokens::{Token, TokenKind};
+use crate::{
+    multipeek::Multipeek,
+    tokens::{Token, TokenKind},
+};
 
 use super::ast::{ParseError, Parser};
 
@@ -47,7 +50,7 @@ pub struct AST<I>
 where
     I: Iterator<Item = Token> + Debug,
 {
-    tokens: Peekable<I>,
+    tokens: Multipeek<I>,
     errors: Vec<ParseError>,
 }
 
@@ -57,7 +60,7 @@ where
 {
     pub fn new(tokens: I) -> Self {
         Self {
-            tokens: tokens.peekable(),
+            tokens: Multipeek::new(tokens),
             errors: Vec::new(),
         }
     }
