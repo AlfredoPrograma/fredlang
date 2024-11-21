@@ -1,5 +1,7 @@
 package lexer
 
+import "unicode"
+
 type Lexer struct {
 	source  []rune
 	tokens  []Token
@@ -24,6 +26,11 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 	for !l.isEnd() {
 		var token Token
 		ch := l.advance()
+
+		if unicode.IsSpace(ch) {
+			l.consumeSpaces()
+			continue
+		}
 
 		switch ch {
 		case LParen.Rune():
@@ -91,7 +98,7 @@ func (l *Lexer) advance() rune {
 	return ch
 }
 
-func (l *Lexer) peek() rune {
+func (l *Lexer) lookahead() rune {
 	if l.isEnd() {
 		return 0
 	}
@@ -99,8 +106,12 @@ func (l *Lexer) peek() rune {
 	return l.source[l.current]
 }
 
+func (l *Lexer) peek() rune {
+	return l.source[l.start]
+}
+
 func (l *Lexer) match(target rune) bool {
-	if l.peek() == target {
+	if l.lookahead() == target {
 		l.advance()
 		return true
 	}
@@ -110,4 +121,28 @@ func (l *Lexer) match(target rune) bool {
 
 func (l *Lexer) isEnd() bool {
 	return l.current >= len(l.source)
+}
+
+func (l *Lexer) increaseLine() {
+	l.line++
+}
+
+func (l *Lexer) consumeSpaces() {
+	if l.peek() == '\n' {
+		l.increaseLine()
+	}
+
+	for !l.isEnd() {
+		ch := l.lookahead()
+
+		if !unicode.IsSpace(ch) {
+			break
+		}
+
+		if ch == '\n' {
+			l.increaseLine()
+		}
+
+		l.advance()
+	}
 }

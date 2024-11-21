@@ -3,7 +3,7 @@ package lexer
 import "testing"
 
 func TestScanTokens(t *testing.T) {
-	source := "(){},.-+;/*!!====<<=>>="
+	source := "()   {   },.-+;/*!!= ==\n   =<<=>>=  \n"
 	lexer := New(source)
 	expectedTokens := []Token{
 		newToken(LParen, LParen.Lexeme(), 1),
@@ -20,11 +20,11 @@ func TestScanTokens(t *testing.T) {
 		newToken(Bang, Bang.Lexeme(), 1),
 		newToken(BangEq, BangEq.Lexeme(), 1),
 		newToken(DoubleEq, DoubleEq.Lexeme(), 1),
-		newToken(Eq, Eq.Lexeme(), 1),
-		newToken(Less, Less.Lexeme(), 1),
-		newToken(LessEq, LessEq.Lexeme(), 1),
-		newToken(Greater, Greater.Lexeme(), 1),
-		newToken(GreaterEq, GreaterEq.Lexeme(), 1),
+		newToken(Eq, Eq.Lexeme(), 2),
+		newToken(Less, Less.Lexeme(), 2),
+		newToken(LessEq, LessEq.Lexeme(), 2),
+		newToken(Greater, Greater.Lexeme(), 2),
+		newToken(GreaterEq, GreaterEq.Lexeme(), 2),
 	}
 
 	tokens, _ := lexer.ScanTokens()
