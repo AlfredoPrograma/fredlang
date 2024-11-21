@@ -23,6 +23,8 @@ const (
 	Less      TokenKind = "Less"
 	LessEq    TokenKind = "LessEq"
 	String    TokenKind = "String"
+	Integer   TokenKind = "Integer"
+	Float     TokenKind = "Float"
 )
 
 func (t TokenKind) Lexeme() string {

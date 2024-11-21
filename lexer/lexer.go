@@ -36,6 +36,32 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 			continue
 		}
 
+		if ch == '"' {
+			lexeme, err := l.parseString()
+
+			if err != nil {
+				l.errors = append(l.errors, err.Error())
+				continue
+			}
+
+			token = newToken(String, lexeme, l.line)
+			l.tokens = append(l.tokens, token)
+			continue
+		}
+
+		if unicode.IsNumber(ch) {
+			lexeme, isFloat := l.parseNumber()
+
+			if isFloat {
+				token = newToken(Float, lexeme, l.line)
+			} else {
+				token = newToken(Integer, lexeme, l.line)
+			}
+
+			l.tokens = append(l.tokens, token)
+			continue
+		}
+
 		switch ch {
 		case LParen.Rune():
 			token = newToken(LParen, LParen.Lexeme(), l.line)
@@ -83,16 +109,6 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 			} else {
 				token = newToken(Less, Less.Lexeme(), l.line)
 			}
-		case '"':
-			lexeme, err := l.parseString()
-
-			if err != nil {
-				l.errors = append(l.errors, err.Error())
-				continue
-			}
-
-			token = newToken(String, lexeme, l.line)
-
 		default:
 			l.errors = append(l.errors, "Unexpected token")
 			continue
@@ -117,6 +133,16 @@ func (l *Lexer) lookahead() rune {
 	}
 
 	return l.source[l.current]
+}
+
+func (l *Lexer) lookaheadBy(skip int) rune {
+	nextIdx := l.start + skip
+
+	if nextIdx >= len(l.source) {
+		return 0
+	}
+
+	return l.source[nextIdx]
 }
 
 func (l *Lexer) peek() rune {
@@ -174,4 +200,36 @@ func (l *Lexer) parseString() (string, error) {
 	}
 
 	return "", errors.New("unterminated string")
+}
+
+func (l *Lexer) parseNumber() (string, bool) {
+	var lexeme strings.Builder
+	lexeme.WriteRune(l.peek())
+	isFloat := false
+
+	for !l.isEnd() {
+		ch := l.lookahead()
+
+		if ch == '.' && !isFloat {
+			chAfterFloat := l.lookaheadBy(2)
+
+			if !unicode.IsNumber(chAfterFloat) {
+				break
+			}
+
+			isFloat = true
+			lexeme.WriteRune('.')
+			l.advance()
+			continue
+		}
+
+		if !unicode.IsNumber(ch) {
+			break
+		}
+
+		lexeme.WriteRune(ch)
+		l.advance()
+	}
+
+	return lexeme.String(), isFloat
 }
