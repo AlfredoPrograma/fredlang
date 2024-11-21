@@ -22,6 +22,7 @@ const (
 	GreaterEq TokenKind = "GreaterEq"
 	Less      TokenKind = "Less"
 	LessEq    TokenKind = "LessEq"
+	String    TokenKind = "String"
 )
 
 func (t TokenKind) Lexeme() string {

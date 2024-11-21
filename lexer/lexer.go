@@ -1,6 +1,10 @@
 package lexer
 
-import "unicode"
+import (
+	"errors"
+	"strings"
+	"unicode"
+)
 
 type Lexer struct {
 	source  []rune
@@ -79,6 +83,15 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 			} else {
 				token = newToken(Less, Less.Lexeme(), l.line)
 			}
+		case '"':
+			lexeme, err := l.parseString()
+
+			if err != nil {
+				l.errors = append(l.errors, err.Error())
+				continue
+			}
+
+			token = newToken(String, lexeme, l.line)
 
 		default:
 			l.errors = append(l.errors, "Unexpected token")
@@ -145,4 +158,20 @@ func (l *Lexer) consumeSpaces() {
 
 		l.advance()
 	}
+}
+
+func (l *Lexer) parseString() (string, error) {
+	var lexeme strings.Builder
+
+	for !l.isEnd() {
+		ch := l.advance()
+
+		if ch == '"' {
+			return lexeme.String(), nil
+		}
+
+		lexeme.WriteRune(ch)
+	}
+
+	return "", errors.New("unterminated string")
 }
