@@ -3,3 +3,6 @@ run-file:
 
 run-repl:
 	go run ./...
+
+test:
+	go test ./...
