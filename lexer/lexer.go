@@ -62,6 +62,13 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 			continue
 		}
 
+		if unicode.IsLetter(ch) {
+			lexeme, kind := l.parseKeywordOrIdentifier()
+			token = newToken(kind, lexeme, l.line)
+			l.tokens = append(l.tokens, token)
+			continue
+		}
+
 		switch ch {
 		case LParen.Rune():
 			token = newToken(LParen, LParen.Lexeme(), l.line)
@@ -115,6 +122,10 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 		}
 		l.tokens = append(l.tokens, token)
 	}
+
+	l.increaseLine()
+	eof := newToken(EOF, "", l.line)
+	l.tokens = append(l.tokens, eof)
 
 	return l.tokens, l.errors
 }
@@ -232,4 +243,30 @@ func (l *Lexer) parseNumber() (string, bool) {
 	}
 
 	return lexeme.String(), isFloat
+}
+
+func (l *Lexer) parseKeywordOrIdentifier() (string, TokenKind) {
+	var sb strings.Builder
+	sb.WriteRune(l.peek())
+
+	for !l.isEnd() {
+		ch := l.lookahead()
+
+		if !unicode.IsLetter(ch) && !unicode.IsNumber(ch) && ch != '_' {
+			break
+		}
+
+		sb.WriteRune(ch)
+		l.advance()
+	}
+
+	lexeme := sb.String()
+
+	kind, found := tokenKindFromKeyword(lexeme)
+
+	if found {
+		return lexeme, kind
+	}
+
+	return lexeme, Identifier
 }
