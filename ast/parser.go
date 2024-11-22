@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -9,18 +10,20 @@ import (
 
 type Parser struct {
 	tokens  []lexer.Token
+	errors  []error
 	current int
 }
 
 func NewParser(tokens []lexer.Token) Parser {
 	return Parser{
+		errors:  []error{},
 		tokens:  tokens,
 		current: 0,
 	}
 }
 
-func (p *Parser) Parse() Node {
-	return p.parseEquality()
+func (p *Parser) Parse() (Node, []error) {
+	return p.parseEquality(), p.errors
 }
 
 func (p *Parser) parseEquality() Node {
@@ -90,10 +93,10 @@ func (p *Parser) parseUnary() Node {
 func (p *Parser) parsePrimary() Node {
 	if p.match(lexer.LParen) {
 		p.advance()
-		value := p.Parse() // Top level parse expression
+		value, _ := p.Parse() // Top level parse expression
 
 		if !p.match(lexer.RParen) {
-			panic("unterminated group expression")
+			p.registerError("Unterminated group expression")
 		}
 
 		p.advance()
@@ -111,6 +114,7 @@ func (p *Parser) parsePrimary() Node {
 		return p.parseLiteral()
 	}
 
+	p.registerError("Literal expected")
 	return nil
 }
 
@@ -150,7 +154,7 @@ func (p *Parser) parseLiteral() Node {
 	case lexer.Null:
 		value = nil
 	default:
-		panic(fmt.Sprintf("cannot parse primary expression from given token: %#v", token))
+		panic("cannot parse literal")
 	}
 
 	p.advance()
@@ -182,4 +186,8 @@ func (p *Parser) peek() lexer.Token {
 
 func (p *Parser) isEnd() bool {
 	return p.current >= len(p.tokens)
+}
+
+func (p *Parser) registerError(message string) {
+	p.errors = append(p.errors, errors.New(message))
 }

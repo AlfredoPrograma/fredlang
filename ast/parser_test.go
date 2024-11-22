@@ -12,7 +12,7 @@ func TestParse(t *testing.T) {
 	tokens, _ := l.ScanTokens()
 	p := NewParser(tokens)
 	expected := "(((3 * ((5 - 2))) > (12 / 1)) == (4 < ((1 + 2) + (3 * 10))))"
-	expr := p.Parse()
+	expr, _ := p.Parse()
 
 	if expr.String() != expected {
 		t.Errorf("mismatching parsing tree. expected\n%s\nbut got\n%s", expected, expr.String())
