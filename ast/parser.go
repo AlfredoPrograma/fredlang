@@ -20,7 +20,20 @@ func NewParser(tokens []lexer.Token) Parser {
 }
 
 func (p *Parser) Parse() Node {
-	return p.parseComparison()
+	return p.parseEquality()
+}
+
+func (p *Parser) parseEquality() Node {
+	left := p.parseComparison()
+
+	for !p.isEnd() && p.match(lexer.DoubleEq, lexer.BangEq) {
+		op := p.peek()
+		p.advance()
+		right := p.parseComparison()
+		left = Binary{left, op, right}
+	}
+
+	return left
 }
 
 func (p *Parser) parseComparison() Node {

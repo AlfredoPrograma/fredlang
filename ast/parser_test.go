@@ -6,6 +6,33 @@ import (
 	"github.com/alfredoprograma/fredlang/lexer"
 )
 
+func TestParseEquality(t *testing.T) {
+	tokens := []lexer.Token{
+		lexer.NewToken(lexer.True, "true", 1),
+		lexer.NewToken(lexer.DoubleEq, lexer.DoubleEq.Lexeme(), 1),
+		lexer.NewToken(lexer.False, "false", 1),
+	}
+
+	expectedEquality := Binary{
+		left:  Primary{true},
+		op:    lexer.NewToken(lexer.DoubleEq, lexer.DoubleEq.Lexeme(), 1),
+		right: Primary{false},
+	}
+
+	expectedStringification := "(true == false)"
+
+	p := NewParser(tokens)
+	equality := p.parseEquality()
+
+	if equality != expectedEquality {
+		t.Errorf("mismatching equality expression. expected %#v, but got %#v", expectedEquality, equality)
+	}
+
+	if equality.String() != expectedStringification {
+		t.Errorf("mismatching equality stringification. expected %s, but got %s", expectedStringification, equality.String())
+	}
+}
+
 func TestParseComparison(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.Integer, "80", 1),
