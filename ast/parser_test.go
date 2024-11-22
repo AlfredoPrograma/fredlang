@@ -6,6 +6,33 @@ import (
 	"github.com/alfredoprograma/fredlang/lexer"
 )
 
+func TestParseComparison(t *testing.T) {
+	tokens := []lexer.Token{
+		lexer.NewToken(lexer.Integer, "80", 1),
+		lexer.NewToken(lexer.GreaterEq, lexer.GreaterEq.Lexeme(), 1),
+		lexer.NewToken(lexer.Integer, "35", 1),
+	}
+
+	expectedComparison := Binary{
+		left:  Primary{80},
+		op:    lexer.NewToken(lexer.GreaterEq, lexer.GreaterEq.Lexeme(), 1),
+		right: Primary{35},
+	}
+
+	expectedStringification := "(80 >= 35)"
+
+	p := NewParser(tokens)
+	comparison := p.parseComparison()
+
+	if comparison != expectedComparison {
+		t.Errorf("mismatching comparison expression. expected %#v, but got %#v", expectedComparison, comparison)
+	}
+
+	if comparison.String() != expectedStringification {
+		t.Errorf("mismatching comparison stringification. expected %s, but got %s", expectedStringification, comparison.String())
+	}
+}
+
 func TestParseTerm(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.Integer, "20", 1),
