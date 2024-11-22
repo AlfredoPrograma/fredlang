@@ -6,6 +6,19 @@ import (
 	"github.com/alfredoprograma/fredlang/lexer"
 )
 
+func TestParse(t *testing.T) {
+	source := "3 * (5 - 2) > 12 / 1 == 4 < 1 + 2 + 3 * 10"
+	l := lexer.New(source)
+	tokens, _ := l.ScanTokens()
+	p := NewParser(tokens)
+	expected := "(((3 * ((5 - 2))) > (12 / 1)) == (4 < ((1 + 2) + (3 * 10))))"
+	expr := p.Parse()
+
+	if expr.String() != expected {
+		t.Errorf("mismatching parsing tree. expected\n%s\nbut got\n%s", expected, expr.String())
+	}
+}
+
 func TestParseEquality(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.True, "true", 1),
