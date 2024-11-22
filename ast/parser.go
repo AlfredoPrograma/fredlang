@@ -105,8 +105,7 @@ func (p *Parser) parsePrimary() Node {
 
 	if p.match(
 		lexer.String,
-		lexer.Integer,
-		lexer.Float,
+		lexer.Number,
 		lexer.True,
 		lexer.False,
 		lexer.Null,
@@ -127,22 +126,14 @@ func (p *Parser) parseLiteral() Node {
 	switch kind {
 	case lexer.String:
 		value = lexeme
-	case lexer.Integer:
-		integer, err := strconv.Atoi(lexeme)
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot parse lexeme from given token as integer: %#v", token))
-		}
-
-		value = integer
-	case lexer.Float:
-		float, err := strconv.ParseFloat(lexeme, 32)
+	case lexer.Number:
+		number, err := strconv.ParseFloat(lexeme, 32)
 
 		if err != nil {
 			panic(fmt.Sprintf("cannot parse lexeme from given token as float: %#v", token))
 		}
 
-		value = float
+		value = number
 	case lexer.True, lexer.False:
 		boolean, err := strconv.ParseBool(lexeme)
 

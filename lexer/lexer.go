@@ -50,14 +50,8 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 		}
 
 		if unicode.IsNumber(ch) {
-			lexeme, isFloat := l.parseNumber()
-
-			if isFloat {
-				token = NewToken(Float, lexeme, l.line)
-			} else {
-				token = NewToken(Integer, lexeme, l.line)
-			}
-
+			lexeme := l.parseNumber()
+			token = NewToken(Number, lexeme, l.line)
 			l.tokens = append(l.tokens, token)
 			continue
 		}
@@ -213,7 +207,7 @@ func (l *Lexer) parseString() (string, error) {
 	return "", errors.New("unterminated string")
 }
 
-func (l *Lexer) parseNumber() (string, bool) {
+func (l *Lexer) parseNumber() string {
 	var lexeme strings.Builder
 	lexeme.WriteRune(l.peek())
 	isFloat := false
@@ -242,7 +236,7 @@ func (l *Lexer) parseNumber() (string, bool) {
 		l.advance()
 	}
 
-	return lexeme.String(), isFloat
+	return lexeme.String()
 }
 
 func (l *Lexer) parseKeywordOrIdentifier() (string, TokenKind) {

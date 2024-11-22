@@ -48,15 +48,15 @@ func TestParseEquality(t *testing.T) {
 
 func TestParseComparison(t *testing.T) {
 	tokens := []lexer.Token{
-		lexer.NewToken(lexer.Integer, "80", 1),
+		lexer.NewToken(lexer.Number, "80", 1),
 		lexer.NewToken(lexer.GreaterEq, lexer.GreaterEq.Lexeme(), 1),
-		lexer.NewToken(lexer.Integer, "35", 1),
+		lexer.NewToken(lexer.Number, "35", 1),
 	}
 
 	expectedComparison := Binary{
-		left:  Primary{80},
+		left:  Primary{80.0},
 		op:    lexer.NewToken(lexer.GreaterEq, lexer.GreaterEq.Lexeme(), 1),
-		right: Primary{35},
+		right: Primary{35.0},
 	}
 
 	expectedStringification := "(80 >= 35)"
@@ -75,15 +75,15 @@ func TestParseComparison(t *testing.T) {
 
 func TestParseTerm(t *testing.T) {
 	tokens := []lexer.Token{
-		lexer.NewToken(lexer.Integer, "20", 1),
+		lexer.NewToken(lexer.Number, "20", 1),
 		lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
-		lexer.NewToken(lexer.Integer, "10", 1),
+		lexer.NewToken(lexer.Number, "10", 1),
 	}
 
 	expectedTerm := Binary{
-		left:  Primary{20},
+		left:  Primary{20.0},
 		op:    lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
-		right: Primary{10},
+		right: Primary{10.0},
 	}
 
 	expectedStringification := "(20 - 10)"
@@ -102,15 +102,15 @@ func TestParseTerm(t *testing.T) {
 
 func TestParseFactor(t *testing.T) {
 	tokens := []lexer.Token{
-		lexer.NewToken(lexer.Integer, "5", 1),
+		lexer.NewToken(lexer.Number, "5", 1),
 		lexer.NewToken(lexer.Star, lexer.Star.Lexeme(), 1),
-		lexer.NewToken(lexer.Integer, "12", 1),
+		lexer.NewToken(lexer.Number, "12", 1),
 	}
 
 	expectedFactor := Binary{
-		left:  Primary{5},
+		left:  Primary{5.0},
 		op:    lexer.NewToken(lexer.Star, lexer.Star.Lexeme(), 1),
-		right: Primary{12},
+		right: Primary{12.0},
 	}
 
 	expectedStringification := "(5 * 12)"
@@ -130,12 +130,12 @@ func TestParseFactor(t *testing.T) {
 func TestParseUnary(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
-		lexer.NewToken(lexer.Integer, "10", 1),
+		lexer.NewToken(lexer.Number, "10", 1),
 	}
 
 	expectedUnary := Unary{
 		op:   lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
-		node: Primary{10},
+		node: Primary{10.0},
 	}
 	expectedStringification := "(-10)"
 
@@ -154,8 +154,8 @@ func TestParseUnary(t *testing.T) {
 func TestParseLiteral(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.String, "Hello world", 1),
-		lexer.NewToken(lexer.Integer, "10", 1),
-		lexer.NewToken(lexer.Float, "15.5", 1),
+		lexer.NewToken(lexer.Number, "10", 1),
+		lexer.NewToken(lexer.Number, "15.5", 1),
 		lexer.NewToken(lexer.True, "true", 1),
 		lexer.NewToken(lexer.False, "false", 1),
 		lexer.NewToken(lexer.Null, "null", 1),
@@ -163,7 +163,7 @@ func TestParseLiteral(t *testing.T) {
 
 	expectedExprs := []Primary{
 		{"Hello world"},
-		{10},
+		{10.0},
 		{15.5},
 		{true},
 		{false},
