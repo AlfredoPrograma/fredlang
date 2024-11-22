@@ -10,19 +10,30 @@ import (
 type Parser struct {
 	tokens  []lexer.Token
 	current int
-	start   int
 }
 
 func NewParser(tokens []lexer.Token) Parser {
 	return Parser{
 		tokens:  tokens,
 		current: 0,
-		start:   0,
 	}
 }
 
 func (p *Parser) Parse() Node {
-	return p.parseUnary()
+	return p.parseFactor()
+}
+
+func (p *Parser) parseFactor() Node {
+	left := p.parseUnary()
+
+	for !p.isEnd() && p.match(lexer.Star, lexer.Slash) {
+		op := p.peek()
+		p.advance()
+		right := p.parseUnary()
+		left = Binary{left, op, right}
+	}
+
+	return left
 }
 
 func (p *Parser) parseUnary() Node {
@@ -109,7 +120,8 @@ func (p *Parser) parseLiteral() Node {
 
 func (p *Parser) advance() lexer.Token {
 	token := p.tokens[p.current]
-	p.start = p.current
+
+	fmt.Println(token, p.current)
 	p.current++
 
 	return token
@@ -129,4 +141,8 @@ func (p *Parser) match(targets ...lexer.TokenKind) bool {
 
 func (p *Parser) peek() lexer.Token {
 	return p.tokens[p.current]
+}
+
+func (p *Parser) isEnd() bool {
+	return p.current >= len(p.tokens)
 }
