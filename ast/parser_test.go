@@ -6,6 +6,30 @@ import (
 	"github.com/alfredoprograma/fredlang/lexer"
 )
 
+func TestParseUnary(t *testing.T) {
+	tokens := []lexer.Token{
+		lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
+		lexer.NewToken(lexer.Integer, "10", 1),
+	}
+
+	expectedUnary := Unary{
+		op:   lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
+		node: Primary{10},
+	}
+	expectedStringification := "(-10)"
+
+	p := NewParser(tokens)
+	unary := p.parseUnary()
+
+	if unary != expectedUnary {
+		t.Errorf("mismatching unary expression. expected %#v, but got %#v", expectedUnary, unary)
+	}
+
+	if unary.String() != expectedStringification {
+		t.Errorf("mismatching unary stringification. expected %s, but got %s", expectedStringification, unary.String())
+	}
+}
+
 func TestParseLiteral(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.String, "Hello world", 1),

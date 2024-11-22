@@ -31,7 +31,7 @@ type Unary struct {
 	node Node
 }
 
-func (u *Unary) String() string {
+func (u Unary) String() string {
 	return fmt.Sprintf("(%s%s)", u.op.Lexeme(), u.node.String())
 }
 
@@ -41,6 +41,6 @@ type Binary struct {
 	right Node
 }
 
-func (b *Binary) String() string {
+func (b Binary) String() string {
 	return fmt.Sprintf("(%s %s %s)", b.left.String(), b.op.Lexeme(), b.right.String())
 }

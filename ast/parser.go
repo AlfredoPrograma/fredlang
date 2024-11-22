@@ -22,6 +22,18 @@ func NewParser(tokens []lexer.Token) Parser {
 }
 
 func (p *Parser) Parse() Node {
+	return p.parseUnary()
+}
+
+func (p *Parser) parseUnary() Node {
+	if p.match(lexer.Minus, lexer.Bang) {
+		op := p.peek()
+		p.advance()
+		node := p.parseUnary()
+
+		return Unary{op, node}
+	}
+
 	return p.parsePrimary()
 }
 
