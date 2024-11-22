@@ -130,10 +130,18 @@ type Token struct {
 	line   int
 }
 
-func newToken(kind TokenKind, lexeme string, line int) Token {
+func NewToken(kind TokenKind, lexeme string, line int) Token {
 	return Token{
 		kind,
 		lexeme,
 		line,
 	}
+}
+
+func (t *Token) Kind() TokenKind {
+	return t.kind
+}
+
+func (t *Token) Lexeme() string {
+	return t.lexeme
 }
