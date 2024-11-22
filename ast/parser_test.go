@@ -6,6 +6,33 @@ import (
 	"github.com/alfredoprograma/fredlang/lexer"
 )
 
+func TestParseTerm(t *testing.T) {
+	tokens := []lexer.Token{
+		lexer.NewToken(lexer.Integer, "20", 1),
+		lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
+		lexer.NewToken(lexer.Integer, "10", 1),
+	}
+
+	expectedTerm := Binary{
+		left:  Primary{20},
+		op:    lexer.NewToken(lexer.Minus, lexer.Minus.Lexeme(), 1),
+		right: Primary{10},
+	}
+
+	expectedStringification := "(20 - 10)"
+
+	p := NewParser(tokens)
+	term := p.parseTerm()
+
+	if term != expectedTerm {
+		t.Errorf("mismatching term expression. expected %#v, but got %#v", expectedTerm, term)
+	}
+
+	if term.String() != expectedStringification {
+		t.Errorf("mismatching term stringification. expected %s, but got %s", expectedStringification, term.String())
+	}
+}
+
 func TestParseFactor(t *testing.T) {
 	tokens := []lexer.Token{
 		lexer.NewToken(lexer.Integer, "5", 1),
@@ -31,7 +58,6 @@ func TestParseFactor(t *testing.T) {
 	if factor.String() != expectedStringification {
 		t.Errorf("mismatching factor stringification. expected %s, but got %s", expectedStringification, factor.String())
 	}
-
 }
 
 func TestParseUnary(t *testing.T) {

@@ -20,7 +20,20 @@ func NewParser(tokens []lexer.Token) Parser {
 }
 
 func (p *Parser) Parse() Node {
-	return p.parseFactor()
+	return p.parseTerm()
+}
+
+func (p *Parser) parseTerm() Node {
+	left := p.parseFactor()
+
+	for !p.isEnd() && p.match(lexer.Plus, lexer.Minus) {
+		op := p.peek()
+		p.advance()
+		right := p.parseFactor()
+		left = Binary{left, op, right}
+	}
+
+	return left
 }
 
 func (p *Parser) parseFactor() Node {
@@ -120,8 +133,6 @@ func (p *Parser) parseLiteral() Node {
 
 func (p *Parser) advance() lexer.Token {
 	token := p.tokens[p.current]
-
-	fmt.Println(token, p.current)
 	p.current++
 
 	return token
