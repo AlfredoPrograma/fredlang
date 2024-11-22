@@ -44,7 +44,7 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 				continue
 			}
 
-			token = newToken(String, lexeme, l.line)
+			token = NewToken(String, lexeme, l.line)
 			l.tokens = append(l.tokens, token)
 			continue
 		}
@@ -53,9 +53,9 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 			lexeme, isFloat := l.parseNumber()
 
 			if isFloat {
-				token = newToken(Float, lexeme, l.line)
+				token = NewToken(Float, lexeme, l.line)
 			} else {
-				token = newToken(Integer, lexeme, l.line)
+				token = NewToken(Integer, lexeme, l.line)
 			}
 
 			l.tokens = append(l.tokens, token)
@@ -64,57 +64,57 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 
 		if unicode.IsLetter(ch) {
 			lexeme, kind := l.parseKeywordOrIdentifier()
-			token = newToken(kind, lexeme, l.line)
+			token = NewToken(kind, lexeme, l.line)
 			l.tokens = append(l.tokens, token)
 			continue
 		}
 
 		switch ch {
 		case LParen.Rune():
-			token = newToken(LParen, LParen.Lexeme(), l.line)
+			token = NewToken(LParen, LParen.Lexeme(), l.line)
 		case RParen.Rune():
-			token = newToken(RParen, RParen.Lexeme(), l.line)
+			token = NewToken(RParen, RParen.Lexeme(), l.line)
 		case LBrace.Rune():
-			token = newToken(LBrace, LBrace.Lexeme(), l.line)
+			token = NewToken(LBrace, LBrace.Lexeme(), l.line)
 		case RBrace.Rune():
-			token = newToken(RBrace, RBrace.Lexeme(), l.line)
+			token = NewToken(RBrace, RBrace.Lexeme(), l.line)
 		case Comma.Rune():
-			token = newToken(Comma, Comma.Lexeme(), l.line)
+			token = NewToken(Comma, Comma.Lexeme(), l.line)
 		case Dot.Rune():
-			token = newToken(Dot, Dot.Lexeme(), l.line)
+			token = NewToken(Dot, Dot.Lexeme(), l.line)
 		case Minus.Rune():
-			token = newToken(Minus, Minus.Lexeme(), l.line)
+			token = NewToken(Minus, Minus.Lexeme(), l.line)
 		case Plus.Rune():
-			token = newToken(Plus, Plus.Lexeme(), l.line)
+			token = NewToken(Plus, Plus.Lexeme(), l.line)
 		case Semicolon.Rune():
-			token = newToken(Semicolon, Semicolon.Lexeme(), l.line)
+			token = NewToken(Semicolon, Semicolon.Lexeme(), l.line)
 		case Slash.Rune():
-			token = newToken(Slash, Slash.Lexeme(), l.line)
+			token = NewToken(Slash, Slash.Lexeme(), l.line)
 		case Star.Rune():
-			token = newToken(Star, Star.Lexeme(), l.line)
+			token = NewToken(Star, Star.Lexeme(), l.line)
 		case Bang.Rune():
 			if l.match(Eq.Rune()) {
-				token = newToken(BangEq, BangEq.Lexeme(), l.line)
+				token = NewToken(BangEq, BangEq.Lexeme(), l.line)
 			} else {
-				token = newToken(Bang, Bang.Lexeme(), l.line)
+				token = NewToken(Bang, Bang.Lexeme(), l.line)
 			}
 		case Eq.Rune():
 			if l.match(Eq.Rune()) {
-				token = newToken(DoubleEq, DoubleEq.Lexeme(), l.line)
+				token = NewToken(DoubleEq, DoubleEq.Lexeme(), l.line)
 			} else {
-				token = newToken(Eq, Eq.Lexeme(), l.line)
+				token = NewToken(Eq, Eq.Lexeme(), l.line)
 			}
 		case Greater.Rune():
 			if l.match(Eq.Rune()) {
-				token = newToken(GreaterEq, GreaterEq.Lexeme(), l.line)
+				token = NewToken(GreaterEq, GreaterEq.Lexeme(), l.line)
 			} else {
-				token = newToken(Greater, Greater.Lexeme(), l.line)
+				token = NewToken(Greater, Greater.Lexeme(), l.line)
 			}
 		case Less.Rune():
 			if l.match(Eq.Rune()) {
-				token = newToken(LessEq, LessEq.Lexeme(), l.line)
+				token = NewToken(LessEq, LessEq.Lexeme(), l.line)
 			} else {
-				token = newToken(Less, Less.Lexeme(), l.line)
+				token = NewToken(Less, Less.Lexeme(), l.line)
 			}
 		default:
 			l.errors = append(l.errors, "Unexpected token")
@@ -124,7 +124,7 @@ func (l *Lexer) ScanTokens() ([]Token, []string) {
 	}
 
 	l.increaseLine()
-	eof := newToken(EOF, "", l.line)
+	eof := NewToken(EOF, "", l.line)
 	l.tokens = append(l.tokens, eof)
 
 	return l.tokens, l.errors
